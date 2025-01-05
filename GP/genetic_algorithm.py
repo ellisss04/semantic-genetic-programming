@@ -1,98 +1,179 @@
 import random
 from typing import List, Callable, Any
-
 from GP.node import Node
 from GP.individual import Individual
+from GP.utils import plot_fitness
 
 
 class GeneticProgram:
-    def __init__(self, population_size: int, max_depth: int, functions: List[Callable], terminals: List[Any]):
+    """
+    A class representing a Genetic Programming framework for evolving solutions to problems.
+    This framework uses a population of tree-based programs, applying genetic operators like
+    selection, crossover, and mutation to evolve solutions over generations.
+    """
+
+    def __init__(self, population_size: int, max_depth: int, functions: List[Callable], terminals: List[Any], dataset):
+        """
+        Initialize the GeneticProgram instance.
+
+        Args:
+            population_size (int): Number of individuals in the population.
+            max_depth (int): Maximum depth of the trees representing individuals.
+            functions (List[Callable]): List of functions (e.g., add, subtract) used as operators.
+            terminals (List[Any]): List of terminals (e.g., variables and constants) used as operands.
+        """
         self.population_size = population_size
         self.max_depth = max_depth
+        self.min_depth = 3
         self.functions = functions
         self.terminals = terminals
         self.population = self.initialize_population()
+        self.dataset = dataset
 
-    # Initialize random population
     def initialize_population(self) -> List[Individual]:
-        return [Individual(self.generate_random_tree(self.max_depth)) for _ in range(self.population_size)]
+        """
+        Generate an initial population of individuals with random trees.
 
-    # Generate a random tree recursively
-    def generate_random_tree(self, depth: int) -> Node:
-        # Base case: If at maximum depth, select a terminal (operand)
-        if depth == 0 or (depth > 1 and random.random() > 0.5):
-            return Node(random.choice(self.terminals))  # Select an operand only
+        Returns:
+            List[Individual]: List of randomly generated individuals.
 
-        # Recursive case: Select a function and create the appropriate number of child nodes
-        func = random.choice(self.functions)  # Select an operator
-        arg_count = func.__code__.co_argcount  # Get the number of arguments the function expects
-        children = [self.generate_random_tree(depth - 1) for _ in range(arg_count)]
+        """
+        return [Individual(self.generate_random_tree(self.max_depth, self.min_depth)) for _ in range(self.population_size)]
+
+    def generate_random_tree(self, depth: int, min_depth: int) -> Node:
+        """
+        Recursively generate a random tree structure.
+
+        Args:
+            depth (int): Remaining depth for the tree.
+            min_depth (int): The minimum depth of a tree before terminal nodes are added
+
+        Returns:
+            Node: Root node of the generated tree.
+        """
+        if depth == 0 or (depth <= min_depth and random.random() > 0.5):
+            return Node(random.choice(self.terminals))  # Terminal node
+        func = random.choice(self.functions)  # Select a function
+        arg_count = func.__code__.co_argcount  # Number of arguments for the function
+        children = [self.generate_random_tree(depth - 1, min_depth) for _ in range(arg_count)]
         return Node(func, children)
 
-    @staticmethod
-    def fitness_function(individual: Individual) -> float:
-        # Example: Negative sum of evaluated output for a dummy dataset
-        example_data = [{'x': 1, 'y': 2}, {'x': -1, 'y': -2}]
-        error = 0
-        for data_point in example_data:
-            result = individual.evaluate(data_point)
-            target = sum(data_point.values())  # Dummy target for illustration
-            error += abs(target - result)
-        return float(-error)
-
     def select(self) -> Individual:
-        tournament = random.sample(self.population, 3)
+        """
+        Select an individual from the population using tournament selection.
+
+        Returns:
+            Individual: The selected individual.
+        """
+        tournament = random.sample(self.population, 4)
         return max(tournament, key=lambda ind: ind.fitness)
 
+    def semantic_selection(self):
+        # TODO: implement a semantic selection method
+        pass
+
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
+        """
+        Perform subtree crossover between two parents to create an offspring.
+
+        Args:
+            parent1 (Individual): First parent.
+            parent2 (Individual): Second parent.
+
+        Returns:
+            Individual: New individual created from crossover.
+        """
         child_tree = self.subtree_crossover(parent1.tree, parent2.tree)
         return Individual(child_tree)
 
     def subtree_crossover(self, tree1: Node, tree2: Node) -> Node:
         """
-        Perform a type-aware subtree crossover, ensuring operators are swapped
-        with operators and operands with operands.
+        Perform subtree crossover between two nodes.
+
+        Args:
+            tree1 (Node): Subtree of the first parent.
+            tree2 (Node): Subtree of the second parent.
+
+        Returns:
+            Node: New subtree generated from crossover.
         """
-
-        # Base case: If one node is an operand and the other is an operator, do not swap; just return the original
-        if callable(tree1.value) != callable(tree2.value):
+        if callable(tree1.value) != callable(tree2.value):  # Ensure type match
             return tree1 if random.random() > 0.5 else tree2
-
-        if callable(tree1.value) and callable(tree2.value):  # Both are operators
-            # Create a new operator node with children recursively crossed over
+        if callable(tree1.value) and callable(tree2.value):  # Both are functions
             new_tree = Node(tree1.value,
                             [self.subtree_crossover(c1, c2) for c1, c2 in zip(tree1.children, tree2.children)])
-        else:  # Both are operands
+        else:  # Both are terminals
             new_tree = Node(tree1.value if random.random() > 0.5 else tree2.value)
-
         return new_tree
 
     def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
-        """Mutate an individual by randomly replacing a node with a new operand or operator of the same type."""
+        """
+        Mutate an individual by replacing nodes randomly.
+
+        Args:
+            individual (Individual): Individual to mutate.
+            mutation_rate (float): Probability of mutating a node.
+
+        Returns:
+            Individual: Mutated individual.
+        """
 
         def mutate_node(node: Node, depth: int) -> Node:
             if random.random() < mutation_rate:
-                if callable(node.value):  # It's an operator, so replace with another operator
+                if callable(node.value):  # Replace operator
                     new_func = random.choice(self.functions)
                     return Node(new_func, [mutate_node(child, depth - 1) for child in node.children])
-                else:
+                else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
                     return Node(new_terminal)
-
-            if callable(node.value):
+            if callable(node.value):  # Recurse on children
                 node.children = [mutate_node(child, depth - 1) for child in node.children]
             return node
 
         mutated_tree = mutate_node(individual.tree, self.max_depth)
         return Individual(mutated_tree)
 
-    def evolve(self, generations: int, mutation_rate: float):
-        for generation in range(generations):
-            for individual in self.population:
-                if individual.fitness is None:
-                    individual.fitness = self.fitness_function(individual)
+    def fitness_function(self, ind: Individual):
+        total_error = 0  # Initialize total error for the individual
 
-            # Calculate best and average fitness
+        for x_value, y_value in self.dataset:
+            variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
+            y_pred = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
+
+            ind.set_semantics(y_pred)
+
+            error = (y_pred - y_value) ** 2
+            total_error += error
+
+        mse = total_error / len(self.dataset)  # Calculate the mean squared error
+
+        return -mse
+
+    def evolve(self, generations: int, mutation_rate: float):
+        """
+        Run the genetic programming evolutionary process.
+
+        Args:
+            generations (int): Number of generations to evolve.
+            mutation_rate (float): Probability of mutating nodes.
+        """
+        # Lists to store fitness values
+        best_fitness_values = []
+        avg_fitness_values = []
+
+        for generation in range(generations):
+            # Evaluate fitness for all individuals
+            gen_number = 0
+            for individual in self.population:
+                if individual.fitness is None:  # Only evaluate if fitness has not been assigned
+                    fitness = self.fitness_function(individual)
+                    individual.set_fitness(fitness)
+                gen_number += 1
+                print('\n')
+                print(individual)
+                print(gen_number)
+
+            # Calculate total, best, and average fitness
             total_fitness = sum(ind.fitness for ind in self.population if ind.fitness is not None)
             best_individual = max(
                 (ind for ind in self.population if ind.fitness is not None),
@@ -101,16 +182,32 @@ class GeneticProgram:
             )
             avg_fitness = total_fitness / len(self.population) if self.population else 0
 
+            # Store fitness values for this generation
             if best_individual is not None:
-                print(f"Generation {generation}: Best Fitness = {best_individual.fitness}, "
-                      f"Average Fitness = {avg_fitness}")
+                best_fitness_values.append(best_individual.fitness)
+            avg_fitness_values.append(avg_fitness)
 
-            new_population = []
-            while len(new_population) < self.population_size:
-                parent1, parent2 = self.select(), self.select()
-                child = self.crossover(parent1, parent2)
-                child = self.mutate(child, mutation_rate)
-                child.fitness = self.fitness_function(child)
-                new_population.append(child)
+            print(f"Generation {generation}: Best Fitness = {best_individual.fitness}, "
+                  f"Average Fitness = {avg_fitness}")
+
+            new_population = self.set_new_population(mutation_rate)
 
             self.population = new_population
+
+        # Plot the fitness graph
+        plot_fitness(best_fitness_values, avg_fitness_values)
+
+    def set_new_population(self, mutation_rate):
+        new_population = []
+        while len(new_population) < self.population_size:
+            parent1, parent2 = self.select(), self.select()
+            child = self.crossover(parent1, parent2)
+            child = self.mutate(child, mutation_rate)
+
+            # Evaluate the child and assign its fitness
+            fitness = self.fitness_function(child)
+            child.set_fitness(fitness)  # Set the calculated fitness
+
+            new_population.append(child)
+
+        return new_population
