@@ -1,5 +1,9 @@
 import random
+from math import sqrt
 from typing import List, Callable, Any
+
+import numpy as np
+
 from GP.node import Node
 from GP.individual import Individual
 from GP.utils import plot_fitness
@@ -29,6 +33,8 @@ class GeneticProgram:
         self.terminals = terminals
         self.population = self.initialize_population()
         self.dataset = dataset
+        self.semantic_threshold = 0.01
+        self.tournament_size = 5
 
     def initialize_population(self) -> List[Individual]:
         """
@@ -65,12 +71,34 @@ class GeneticProgram:
         Returns:
             Individual: The selected individual.
         """
-        tournament = random.sample(self.population, 4)
+        tournament = random.sample(self.population, 5)
         return max(tournament, key=lambda ind: ind.fitness)
 
-    def semantic_selection(self):
-        # TODO: implement a semantic selection method
-        pass
+    def semantic_selection(self, parent_1: Individual):
+        parent_semantics = parent_1.semantic_vector
+
+        best_candidate = random.choice(self.population)
+        best_fitness = best_candidate.fitness
+
+        for i in range(self.tournament_size):
+            competitor = random.choice(self.population)
+            competitor_semantics = competitor.semantic_vector
+            # if semantically different
+            if self.check_semantic_difference(parent_semantics, competitor_semantics):
+                if competitor.fitness > best_fitness:
+                    best_fitness = competitor.fitness
+                    best_candidate = competitor
+
+        return best_candidate
+
+    def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
+        """
+        Method to check whether two individuals are semantically similar
+        """
+        for i, (val1, val2) in enumerate(zip(semantics_1, semantics_2)):
+            if abs(val1 - val2) >= self.semantic_threshold:
+                return True
+        return False
 
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
         """
@@ -146,8 +174,25 @@ class GeneticProgram:
             total_error += error
 
         mse = total_error / len(self.dataset)  # Calculate the mean squared error
+        rmse = sqrt(mse)
 
-        return -mse
+        return -rmse
+
+    def set_new_population(self, mutation_rate):
+        new_population = []
+        while len(new_population) < self.population_size:
+            parent1 = self.select()
+            parent2 = self.semantic_selection(parent1)
+            child = self.crossover(parent1, parent2)
+            child = self.mutate(child, mutation_rate)
+
+            # Evaluate the child and assign its fitness
+            fitness = self.fitness_function(child)
+            child.set_fitness(fitness)  # Set the calculated fitness
+
+            new_population.append(child)
+
+        return new_population
 
     def evolve(self, generations: int, mutation_rate: float):
         """
@@ -169,9 +214,6 @@ class GeneticProgram:
                     fitness = self.fitness_function(individual)
                     individual.set_fitness(fitness)
                 gen_number += 1
-                print('\n')
-                print(individual)
-                print(gen_number)
 
             # Calculate total, best, and average fitness
             total_fitness = sum(ind.fitness for ind in self.population if ind.fitness is not None)
@@ -191,23 +233,10 @@ class GeneticProgram:
                   f"Average Fitness = {avg_fitness}")
 
             new_population = self.set_new_population(mutation_rate)
-
             self.population = new_population
 
-        # Plot the fitness graph
-        plot_fitness(best_fitness_values, avg_fitness_values)
+        best_fitness_values, avg_fitness_values = np.array(best_fitness_values), np.array(avg_fitness_values)
+        best_fitness_log, avg_fitness_log = np.log(np.abs(best_fitness_values)), np.log(np.abs(avg_fitness_values))
 
-    def set_new_population(self, mutation_rate):
-        new_population = []
-        while len(new_population) < self.population_size:
-            parent1, parent2 = self.select(), self.select()
-            child = self.crossover(parent1, parent2)
-            child = self.mutate(child, mutation_rate)
+        plot_fitness(best_fitness_log, avg_fitness_log)
 
-            # Evaluate the child and assign its fitness
-            fitness = self.fitness_function(child)
-            child.set_fitness(fitness)  # Set the calculated fitness
-
-            new_population.append(child)
-
-        return new_population

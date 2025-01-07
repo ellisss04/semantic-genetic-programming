@@ -26,7 +26,7 @@ def test_terminal_at_leaves():
 
 
 def target_function(x):
-    return x ** 2 + x + 1
+    return x ** 3 + x ** 2 + x
 
 
 def generate_dataset():
@@ -51,8 +51,8 @@ def divide(x, y): return x / y if y != 0 else 1  # Handle division by zero
 
 if __name__ == "__main__":
     functions = [add, subtract, multiply, divide]
-    terminals = ['x', 1, 2]
+    terminals = ['x', 1]
 
     gp = GeneticProgram(population_size=126, max_depth=5, functions=functions,
                         terminals=terminals, dataset=generate_dataset())
-    gp.evolve(generations=50, mutation_rate=0.1)
+    gp.evolve(generations=200, mutation_rate=0.1)
