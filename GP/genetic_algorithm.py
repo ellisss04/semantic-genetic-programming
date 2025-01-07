@@ -16,7 +16,7 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, population_size: int, max_depth: int, functions: List[Callable], terminals: List[Any], dataset):
+    def __init__(self, use_semantics: bool, population_size: int, max_depth: int, functions: List[Callable], terminals: List[Any], dataset):
         """
         Initialize the GeneticProgram instance.
 
@@ -26,6 +26,7 @@ class GeneticProgram:
             functions (List[Callable]): List of functions (e.g., add, subtract) used as operators.
             terminals (List[Any]): List of terminals (e.g., variables and constants) used as operands.
         """
+        self.use_semantics = use_semantics
         self.population_size = population_size
         self.max_depth = max_depth
         self.min_depth = 3
@@ -181,8 +182,11 @@ class GeneticProgram:
     def set_new_population(self, mutation_rate):
         new_population = []
         while len(new_population) < self.population_size:
-            parent1 = self.select()
-            parent2 = self.semantic_selection(parent1)
+            if self.use_semantics:
+                parent1 = self.select()
+                parent2 = self.semantic_selection(parent1)
+            else:
+                parent1, parent2 = self.select(), self.select()
             child = self.crossover(parent1, parent2)
             child = self.mutate(child, mutation_rate)
 

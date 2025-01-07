@@ -1,8 +1,10 @@
-import math
-
 import numpy as np
-
 from GP.genetic_algorithm import GeneticProgram
+
+POPULATION_SIZE = 126
+MAX_DEPTH = 5
+GENERATIONS = 200
+MUTATION_RATE = 0.1
 
 
 def test_terminal_at_leaves():
@@ -53,6 +55,11 @@ if __name__ == "__main__":
     functions = [add, subtract, multiply, divide]
     terminals = ['x', 1]
 
-    gp = GeneticProgram(population_size=126, max_depth=5, functions=functions,
-                        terminals=terminals, dataset=generate_dataset())
-    gp.evolve(generations=200, mutation_rate=0.1)
+    semantic_choice = False
+    choice = input("USE SEMANTICS IN SELECTION? Y/N").upper()
+    if choice == 'Y':
+        semantic_choice = True
+    input(f"STARTING ALGORITHM FOR POPULATION SIZE {POPULATION_SIZE}")
+    gp = GeneticProgram(use_semantics=semantic_choice, population_size=POPULATION_SIZE, max_depth=MAX_DEPTH,
+                        functions=functions, terminals=terminals, dataset=generate_dataset())
+    gp.evolve(generations=GENERATIONS, mutation_rate=MUTATION_RATE)
