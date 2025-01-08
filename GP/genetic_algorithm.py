@@ -6,7 +6,7 @@ import numpy as np
 
 from GP.node import Node
 from GP.individual import Individual
-from GP.utils import plot_fitness
+from GP.utils import plot_fitness, plot_evaluated_nodes
 
 
 class GeneticProgram:
@@ -16,7 +16,8 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, use_semantics: bool, population_size: int, max_depth: int, functions: List[Callable], terminals: List[Any], dataset):
+    def __init__(self, use_semantics: bool, population_size: int, max_depth: int, functions: List[Callable],
+                 terminals: List[Any], dataset, tournament_size: int):
         """
         Initialize the GeneticProgram instance.
 
@@ -28,6 +29,7 @@ class GeneticProgram:
         """
         self.use_semantics = use_semantics
         self.population_size = population_size
+        self.tournament_size = tournament_size
         self.max_depth = max_depth
         self.min_depth = 3
         self.functions = functions
@@ -35,7 +37,10 @@ class GeneticProgram:
         self.population = self.initialize_population()
         self.dataset = dataset
         self.semantic_threshold = 0.01
-        self.tournament_size = 5
+
+        self.evaluated_nodes = []
+        self.best_fitness_values = []
+        self.avg_fitness_values = []
 
     def initialize_population(self) -> List[Individual]:
         """
@@ -45,7 +50,8 @@ class GeneticProgram:
             List[Individual]: List of randomly generated individuals.
 
         """
-        return [Individual(self.generate_random_tree(self.max_depth, self.min_depth)) for _ in range(self.population_size)]
+        return [Individual(self.generate_random_tree(self.max_depth, self.min_depth)) for _ in
+                range(self.population_size)]
 
     def generate_random_tree(self, depth: int, min_depth: int) -> Node:
         """
@@ -60,7 +66,7 @@ class GeneticProgram:
         """
         if depth == 0 or (depth <= min_depth and random.random() > 0.5):
             return Node(random.choice(self.terminals))  # Terminal node
-        func = random.choice(self.functions)  # Select a function
+        func = random.choice(self.functions)
         arg_count = func.__code__.co_argcount  # Number of arguments for the function
         children = [self.generate_random_tree(depth - 1, min_depth) for _ in range(arg_count)]
         return Node(func, children)
@@ -94,12 +100,13 @@ class GeneticProgram:
 
     def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
         """
-        Method to check whether two individuals are semantically similar
+        Method to check whether two individuals are semantically different.
+
+        Two individuals are considered semantically different if all corresponding
+        values in their vectors differ by more than or equal to the threshold.
         """
-        for i, (val1, val2) in enumerate(zip(semantics_1, semantics_2)):
-            if abs(val1 - val2) >= self.semantic_threshold:
-                return True
-        return False
+        return all(abs(val1 - val2) >= self.semantic_threshold
+                   for val1, val2 in zip(semantics_1, semantics_2))
 
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
         """
@@ -164,23 +171,26 @@ class GeneticProgram:
 
     def fitness_function(self, ind: Individual):
         total_error = 0  # Initialize total error for the individual
+        total_node_count = 0
 
         for x_value, y_value in self.dataset:
             variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
-            y_pred = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
+            y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
 
             ind.set_semantics(y_pred)
 
             error = (y_pred - y_value) ** 2
             total_error += error
+            total_node_count += node_count
 
         mse = total_error / len(self.dataset)  # Calculate the mean squared error
         rmse = sqrt(mse)
 
-        return -rmse
+        return -rmse, total_node_count
 
     def set_new_population(self, mutation_rate):
         new_population = []
+        total_node_count = 0
         while len(new_population) < self.population_size:
             if self.use_semantics:
                 parent1 = self.select()
@@ -191,12 +201,32 @@ class GeneticProgram:
             child = self.mutate(child, mutation_rate)
 
             # Evaluate the child and assign its fitness
-            fitness = self.fitness_function(child)
+            fitness, node_count = self.fitness_function(child)
             child.set_fitness(fitness)  # Set the calculated fitness
+            total_node_count += node_count
 
             new_population.append(child)
 
+        self.evaluated_nodes.append(total_node_count)
+
         return new_population
+
+    def get_fitness_metrics(self):
+        # Calculate total, best, and average fitness
+        total_fitness = sum(ind.fitness for ind in self.population if ind.fitness is not None)
+        best_individual = max(
+            (ind for ind in self.population if ind.fitness is not None),
+            key=lambda ind: ind.fitness,
+            default=None
+        )
+        avg_fitness = total_fitness / len(self.population) if self.population else 0
+
+        # Store fitness values for this generation
+        if best_individual is not None:
+            self.best_fitness_values.append(best_individual.fitness)
+        self.avg_fitness_values.append(avg_fitness)
+
+        return best_individual, avg_fitness
 
     def evolve(self, generations: int, mutation_rate: float):
         """
@@ -206,32 +236,14 @@ class GeneticProgram:
             generations (int): Number of generations to evolve.
             mutation_rate (float): Probability of mutating nodes.
         """
-        # Lists to store fitness values
-        best_fitness_values = []
-        avg_fitness_values = []
-
         for generation in range(generations):
             # Evaluate fitness for all individuals
-            gen_number = 0
             for individual in self.population:
                 if individual.fitness is None:  # Only evaluate if fitness has not been assigned
-                    fitness = self.fitness_function(individual)
+                    fitness, node_count = self.fitness_function(individual)
                     individual.set_fitness(fitness)
-                gen_number += 1
 
-            # Calculate total, best, and average fitness
-            total_fitness = sum(ind.fitness for ind in self.population if ind.fitness is not None)
-            best_individual = max(
-                (ind for ind in self.population if ind.fitness is not None),
-                key=lambda ind: ind.fitness,
-                default=None
-            )
-            avg_fitness = total_fitness / len(self.population) if self.population else 0
-
-            # Store fitness values for this generation
-            if best_individual is not None:
-                best_fitness_values.append(best_individual.fitness)
-            avg_fitness_values.append(avg_fitness)
+            best_individual, avg_fitness = self.get_fitness_metrics()
 
             print(f"Generation {generation}: Best Fitness = {best_individual.fitness}, "
                   f"Average Fitness = {avg_fitness}")
@@ -239,8 +251,10 @@ class GeneticProgram:
             new_population = self.set_new_population(mutation_rate)
             self.population = new_population
 
-        best_fitness_values, avg_fitness_values = np.array(best_fitness_values), np.array(avg_fitness_values)
-        best_fitness_log, avg_fitness_log = np.log(np.abs(best_fitness_values)), np.log(np.abs(avg_fitness_values))
+        best_fitness_values = np.array(self.best_fitness_values)
+        avg_fitness_values = np.array(self.avg_fitness_values)
+        best_fitness_log = np.log(np.abs(best_fitness_values))
+        avg_fitness_log = np.log(np.abs(avg_fitness_values))
 
         plot_fitness(best_fitness_log, avg_fitness_log)
-
+        plot_evaluated_nodes(self.evaluated_nodes)

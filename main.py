@@ -5,6 +5,7 @@ POPULATION_SIZE = 126
 MAX_DEPTH = 5
 GENERATIONS = 200
 MUTATION_RATE = 0.1
+TOURNAMENT_SIZE = 7
 
 
 def test_terminal_at_leaves():
@@ -61,5 +62,7 @@ if __name__ == "__main__":
         semantic_choice = True
     input(f"STARTING ALGORITHM FOR POPULATION SIZE {POPULATION_SIZE}")
     gp = GeneticProgram(use_semantics=semantic_choice, population_size=POPULATION_SIZE, max_depth=MAX_DEPTH,
-                        functions=functions, terminals=terminals, dataset=generate_dataset())
+                        functions=functions, terminals=terminals, dataset=generate_dataset(),
+                        tournament_size=TOURNAMENT_SIZE)
+
     gp.evolve(generations=GENERATIONS, mutation_rate=MUTATION_RATE)

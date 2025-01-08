@@ -12,6 +12,9 @@ class Individual:
     def set_fitness(self, fitness: float):
         self.fitness = fitness
 
+    def get_depth(self):
+        return self.tree.get_depth()
+
     def set_semantics(self, output):
         self.semantic_vector.append(output)
 

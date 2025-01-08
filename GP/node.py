@@ -6,16 +6,45 @@ class Node:
         self.value = value
         self.children = children if children is not None else []
 
-    def evaluate(self, variables: dict) -> Any:
+        self.left = None
+        self.right = None
+        if self.children:
+            self.left = self.children[0]
+            self.right = self.children[1]
+
+    def evaluate(self, variables: dict) -> tuple:
+        """
+        Evaluate the node's value based on the provided variables.
+
+        Args:
+            variables (dict): A dictionary mapping variable names to their values.
+
+        Returns:
+            tuple: A tuple containing the evaluation result and the number of nodes evaluated.
+        """
         if callable(self.value) and len(self.children) == 2:
             if len(self.children) != 2:
                 raise ValueError(
                     f"Function {self.value.__name__} requires 2 arguments, "
-                    f"but got {len(self.children)} children.")
-            return self.value(*[child.evaluate(variables) for child in self.children])
+                    f"but got {len(self.children)} children."
+                )
+            # Evaluate children and sum up node counts
+            children_results, total_nodes = zip(*[child.evaluate(variables) for child in self.children])
+            return self.value(*children_results), sum(total_nodes) + 1
 
         # Terminal node case
-        return variables.get(self.value, self.value)
+        return variables.get(self.value, self.value), 1
+
+    def get_depth(self):
+        current_depth = 0
+
+        if self.left:
+            current_depth = max(current_depth, self.left.get_depth())
+
+        if self.right:
+            current_depth = max(current_depth, self.right.get_depth())
+
+        return current_depth + 1
 
     def __str__(self):
         if callable(self.value):
