@@ -16,7 +16,7 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, use_semantics: bool, population_size: int, max_depth: int, min_depth:int, functions: List[Callable],
+    def __init__(self, use_semantics: bool, semantic_threshold: float, population_size: int, initial_depth: int, final_depth:int, functions: List[Callable],
                  terminals: List[Any], dataset, tournament_size: int):
         """
         Initialize the GeneticProgram instance.
@@ -30,46 +30,64 @@ class GeneticProgram:
         self.use_semantics = use_semantics
         self.population_size = population_size
         self.tournament_size = tournament_size
-        self.max_depth = max_depth
-        self.min_depth = min_depth
+        self.initial_depth = initial_depth
+        self.final_depth = final_depth
+        self.min_depth = 3
         self.functions = functions
         self.terminals = terminals
-        self.population = self.initialize_population()
+        self.population = self.ramped_half_and_half()
         self.dataset = dataset
-        self.semantic_threshold = 0.01
+        self.semantic_threshold = semantic_threshold
 
         self.evaluated_nodes = []
         self.best_fitness_values = []
         self.avg_fitness_values = []
 
-    def initialize_population(self) -> List[Individual]:
+        for ind in self.population:
+            print(f'{ind},, ')
+
+    def generate_random_tree(self, depth, method="grow"):
         """
-        Generate an initial population of individuals with random trees.
-
-        Returns:
-            List[Individual]: List of randomly generated individuals.
-
+        Recursively generate a random tree using 'grow' or 'full' initialization.
         """
-        return [Individual(self.generate_random_tree(self.max_depth, self.min_depth)) for _ in
-                range(self.population_size)]
-
-    def generate_random_tree(self, depth: int, min_depth: int) -> Node:
-        """
-        Recursively generate a random tree structure.
-
-        Args:
-            depth (int): Remaining depth for the tree.
-            min_depth (int): The minimum depth of a tree before terminal nodes are added
-
-        Returns:
-            Node: Root node of the generated tree.
-        """
-        if depth == 0 or (depth <= min_depth and random.random() > 0.5):
+        if depth == 0:
             return Node(random.choice(self.terminals))  # Terminal node
+
+        # Full method: Always use a function node until depth = 0
+        if method == "full":
+            func = random.choice(self.functions)
+            arity = func.__code__.co_argcount  # Determine number of children (arity)
+            children = [self.generate_random_tree(depth - 1, method) for _ in range(arity)]
+            return Node(func, children)
+
+        # Grow method: Use randomness but enforce minimum depth
+        if method == "grow" and depth > 1 and random.random() > 0.5:
+            return Node(random.choice(self.terminals))
+
+        # Otherwise, use a function node
         func = random.choice(self.functions)
-        arg_count = func.__code__.co_argcount  # Number of arguments for the function
-        children = [self.generate_random_tree(depth - 1, min_depth) for _ in range(arg_count)]
+        arity = func.__code__.co_argcount
+        children = [self.generate_random_tree(depth - 1, method) for _ in range(arity)]
         return Node(func, children)
+
+    def ramped_half_and_half(self):
+        """
+        Generate a population using ramped half-and-half initialization.
+        """
+        population = []
+        depths = list(range(self.initial_depth, self.final_depth + 1))
+
+        # Divide population into full and grow methods
+        for depth in depths:
+            for _ in range(self.population_size // (2 * len(depths))):
+                # Full method
+                population.append(Individual(self.generate_random_tree(depth, method="full")))
+                # Grow method
+                population.append(Individual(self.generate_random_tree(depth, method="grow")))
+
+        # Shuffle population for randomness
+        random.shuffle(population)
+        return population
 
     def select(self) -> Individual:
         """
@@ -159,15 +177,15 @@ class GeneticProgram:
             if random.random() < mutation_rate:
                 if callable(node.value):  # Replace operator
                     new_func = random.choice(self.functions)
-                    return Node(new_func, [mutate_node(child, depth - 1) for child in node.children])
+                    return Node(new_func, [mutate_node(child, child.get_depth()-1) for child in node.children])
                 else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
                     return Node(new_terminal)
             if callable(node.value):  # Recurse on children
-                node.children = [mutate_node(child, depth - 1) for child in node.children]
+                node.children = [mutate_node(child, child.get_depth()-1) for child in node.children]
             return node
 
-        mutated_tree = mutate_node(individual.tree, self.max_depth)
+        mutated_tree = mutate_node(individual.tree, individual.get_depth())
         return Individual(mutated_tree)
 
     def fitness_function(self, ind: Individual):
