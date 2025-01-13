@@ -1,4 +1,4 @@
-from typing import Union, Callable, Any, Optional, List
+from typing import Union, Callable, Optional, List
 
 
 class Node:

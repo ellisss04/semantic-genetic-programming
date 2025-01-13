@@ -1,31 +1,11 @@
+import random
+
 import numpy as np
 from GP.genetic_algorithm import GeneticProgram
 
-POPULATION_SIZE = 126
-MAX_DEPTH = 5
-GENERATIONS = 200
-MUTATION_RATE = 0.1
-TOURNAMENT_SIZE = 7
+import os
 
-
-def test_terminal_at_leaves():
-    gp = GeneticProgram(population_size=10, max_depth=2, functions=[add, subtract, multiply, divide],
-                        terminals=['x', 'y', 1, 2])
-    tree = gp.generate_random_tree(gp.max_depth)
-
-    def check_leaves(node, depth):
-        if depth == 0 or len(node.children) == 0:
-            if callable(node.value):
-                print("ERROR: Function node found at leaf position:", node.value)
-            else:
-                print("Terminal node at leaf position:", node.value)
-        if callable(node.value):
-            # If it's a function node, ensure children exist and recurse
-            for child in node.children:
-                check_leaves(child, depth - 1)
-
-    check_leaves(tree, gp.max_depth)
-    print("All terminal nodes are at the leaves.")
+from config import Config
 
 
 def target_function(x):
@@ -53,16 +33,38 @@ def divide(x, y): return x / y if y != 0 else 1  # Handle division by zero
 
 
 if __name__ == "__main__":
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, "config.yaml")
+    config = Config(config_path)
+
+    # Access configuration variables
+    independent_runs = config.get("independent_runs", 30)
+    max_generations = config.get("max_generations", 200)
+    max_tree_depth = config.get("max_tree_depth", 5)
+    min_tree_depth = config.get("min_tree_depth", 3)
+    mutation_rate = config.get("mutation_rate", 0.1)
+    output_dir = config.get("output_dir", "results/")
+    population_size = config.get("population_size", 126)
+    project_name = config.get("project_name", "SGP_project")
+    seed = config.get("seed", 42)
+    use_semantics = config.get("use_semantics", True)
+    semantic_threshold = config.get("semantic_threshold", 0.01)
+    tournament_size = config.get("tournament_size", 7)
+    verbose = config.get("verbose", True)
+
+    random.seed(seed)
+
     functions = [add, subtract, multiply, divide]
     terminals = ['x', 1]
+    if verbose:
+        print("Loaded Configuration:")
+        # for key, value in config.items():
+        #     print(f"{key}: {value}")
 
-    semantic_choice = False
-    choice = input("USE SEMANTICS IN SELECTION? Y/N").upper()
-    if choice == 'Y':
-        semantic_choice = True
-    input(f"STARTING ALGORITHM FOR POPULATION SIZE {POPULATION_SIZE}")
-    gp = GeneticProgram(use_semantics=semantic_choice, population_size=POPULATION_SIZE, max_depth=MAX_DEPTH,
-                        functions=functions, terminals=terminals, dataset=generate_dataset(),
-                        tournament_size=TOURNAMENT_SIZE)
+    print(f"Project '{project_name}' initialized with population size {population_size}.")
 
-    gp.evolve(generations=GENERATIONS, mutation_rate=MUTATION_RATE)
+    gp = GeneticProgram(use_semantics=use_semantics, population_size=population_size, max_depth=max_tree_depth,
+                        min_depth=min_tree_depth, functions=functions, terminals=terminals, dataset=generate_dataset(),
+                        tournament_size=tournament_size)
+
+    gp.evolve(generations=max_generations, mutation_rate=mutation_rate)

@@ -25,7 +25,7 @@ def plot_evaluated_nodes(evaluated_nodes):
     generations = list(range(len(evaluated_nodes)))
     plt.plot(generations, evaluated_nodes, label="Semantics in Selection", color="red")
     plt.xlabel("Generation")
-    plt.ylabel("Numbeer of evaluated nodes")
+    plt.ylabel("Number of evaluated nodes")
     plt.title("Evaluated Node Progression Over Generations")
     plt.legend()
     plt.grid()

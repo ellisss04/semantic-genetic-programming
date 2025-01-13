@@ -16,7 +16,7 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, use_semantics: bool, population_size: int, max_depth: int, functions: List[Callable],
+    def __init__(self, use_semantics: bool, population_size: int, max_depth: int, min_depth:int, functions: List[Callable],
                  terminals: List[Any], dataset, tournament_size: int):
         """
         Initialize the GeneticProgram instance.
@@ -31,7 +31,7 @@ class GeneticProgram:
         self.population_size = population_size
         self.tournament_size = tournament_size
         self.max_depth = max_depth
-        self.min_depth = 3
+        self.min_depth = min_depth
         self.functions = functions
         self.terminals = terminals
         self.population = self.initialize_population()
@@ -78,7 +78,7 @@ class GeneticProgram:
         Returns:
             Individual: The selected individual.
         """
-        tournament = random.sample(self.population, 5)
+        tournament = random.sample(self.population, self.tournament_size)
         return max(tournament, key=lambda ind: ind.fitness)
 
     def semantic_selection(self, parent_1: Individual):
@@ -120,6 +120,7 @@ class GeneticProgram:
             Individual: New individual created from crossover.
         """
         child_tree = self.subtree_crossover(parent1.tree, parent2.tree)
+
         return Individual(child_tree)
 
     def subtree_crossover(self, tree1: Node, tree2: Node) -> Node:
@@ -176,7 +177,6 @@ class GeneticProgram:
         for x_value, y_value in self.dataset:
             variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
             y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
-
             ind.set_semantics(y_pred)
 
             error = (y_pred - y_value) ** 2
