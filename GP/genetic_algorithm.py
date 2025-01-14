@@ -43,8 +43,8 @@ class GeneticProgram:
         self.best_fitness_values = []
         self.avg_fitness_values = []
 
-        for ind in self.population:
-            print(f'{ind},, ')
+        # for ind in self.population:
+        #     print(f'{ind},, ')
 
     def generate_random_tree(self, depth, method="grow"):
         """
@@ -61,7 +61,7 @@ class GeneticProgram:
             return Node(func, children)
 
         # Grow method: Use randomness but enforce minimum depth
-        if method == "grow" and depth > 1 and random.random() > 0.5:
+        if method == "grow" and depth < 4 and random.random() > 0.5:
             return Node(random.choice(self.terminals))
 
         # Otherwise, use a function node
@@ -137,29 +137,33 @@ class GeneticProgram:
         Returns:
             Individual: New individual created from crossover.
         """
-        child_tree = self.subtree_crossover(parent1.tree, parent2.tree)
+        # offspring = self.subtree_crossover(parent1.tree, parent2.tree)
 
-        return Individual(child_tree)
+        depth_limit = min(parent1.get_depth(), parent2.get_depth())
+        crossover_depth = random.randint(2, depth_limit)  # min depth = 2 so that only children are swapped
 
-    def subtree_crossover(self, tree1: Node, tree2: Node) -> Node:
-        """
-        Perform subtree crossover between two nodes.
+        offspring = self.subtree_crossover(parent1.tree, parent2.tree, crossover_depth)
 
-        Args:
-            tree1 (Node): Subtree of the first parent.
-            tree2 (Node): Subtree of the second parent.
+        return Individual(offspring)
 
-        Returns:
-            Node: New subtree generated from crossover.
-        """
-        if callable(tree1.value) != callable(tree2.value):  # Ensure type match
-            return tree1 if random.random() > 0.5 else tree2
-        if callable(tree1.value) and callable(tree2.value):  # Both are functions
-            new_tree = Node(tree1.value,
-                            [self.subtree_crossover(c1, c2) for c1, c2 in zip(tree1.children, tree2.children)])
-        else:  # Both are terminals
-            new_tree = Node(tree1.value if random.random() > 0.5 else tree2.value)
-        return new_tree
+    @staticmethod
+    def subtree_crossover(parent1, parent2, depth):
+        # Get all nodes at the specified depth
+        nodes1 = parent1.get_nodes_at_depth(depth)
+
+        nodes2 = parent2.get_nodes_at_depth(depth)
+
+        if not nodes1 or not nodes2:
+            raise ValueError(f"No nodes found at depth {depth} in one of the parents.")
+
+        # Randomly select a node from each parent
+        subtree1 = random.choice(nodes1)
+        subtree2 = random.choice(nodes2)
+
+        # Perform the crossover by replacing subtrees
+        offspring = parent1.replace_subtree(subtree1, subtree2)
+
+        return offspring
 
     def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
         """
@@ -210,12 +214,18 @@ class GeneticProgram:
         new_population = []
         total_node_count = 0
         while len(new_population) < self.population_size:
+
             if self.use_semantics:
                 parent1 = self.select()
                 parent2 = self.semantic_selection(parent1)
             else:
                 parent1, parent2 = self.select(), self.select()
-            child = self.crossover(parent1, parent2)
+
+            if random.random() > 0.5:
+                child = self.crossover(parent1, parent2)
+            else:
+                child = self.crossover(parent2, parent1)
+
             child = self.mutate(child, mutation_rate)
 
             # Evaluate the child and assign its fitness

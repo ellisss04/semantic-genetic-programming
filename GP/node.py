@@ -46,6 +46,26 @@ class Node:
 
         return current_depth + 1
 
+    def get_nodes_at_depth(self, depth, current_depth=1):
+        if current_depth == depth:
+            return [self]
+        nodes = []
+        for child in self.children:
+            nodes.append(child)
+        return nodes
+
+    def replace_subtree(self, target, replacement):
+        if self == target:
+            return replacement
+
+        for i, child in enumerate(self.children):
+            if child == target:
+                self.children[i] = replacement
+                return self
+            else:
+                self.children[i] = child.replace_subtree(target, replacement)
+        return self
+
     def __str__(self):
         if callable(self.value):
             return f"({self.value.__name__} {' '.join(map(str, self.children))})"

@@ -6,7 +6,7 @@ independent_runs: 30
 max_generations: 200
 initial_depth: 5
 final_depth: 7
-mutation_rate: 0.2
+mutation_rate: 0.1
 output_dir: results/
 population_size: 126
 project_name: SGP_project

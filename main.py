@@ -9,7 +9,7 @@ from config import Config
 
 
 def target_function(x):
-    return x ** 3 + x ** 2 + x
+    return x ** 2 + x
 
 
 def generate_dataset():
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     random.seed(seed)
 
     functions = [add, subtract, multiply, divide]
-    terminals = ['x', 1]
+    terminals = ['x', 1, 2]
     if verbose:
         print("Loaded Configuration:")
         # for key, value in config.items():
