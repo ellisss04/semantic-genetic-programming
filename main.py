@@ -9,7 +9,7 @@ from config import Config
 
 
 def target_function(x):
-    return x ** 2 + x
+    return x ** 3 + x ** 2 + x
 
 
 def generate_dataset():
@@ -58,8 +58,9 @@ if __name__ == "__main__":
     terminals = ['x', 1, 2]
     if verbose:
         print("Loaded Configuration:")
-        # for key, value in config.items():
-        #     print(f"{key}: {value}")
+        for key, value in config.items.items():
+            print(f"{key}: {value}")
+        input("CONFIGURED. PRESS ENTER")
 
     print(f"Project '{project_name}' initialized with population size {population_size}.")
 

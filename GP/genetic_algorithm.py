@@ -137,8 +137,6 @@ class GeneticProgram:
         Returns:
             Individual: New individual created from crossover.
         """
-        # offspring = self.subtree_crossover(parent1.tree, parent2.tree)
-
         depth_limit = min(parent1.get_depth(), parent2.get_depth())
         crossover_depth = random.randint(2, depth_limit)  # min depth = 2 so that only children are swapped
 

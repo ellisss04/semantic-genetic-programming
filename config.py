@@ -11,6 +11,7 @@ class Config:
         """
         self.config_path = config_path
         self.config = self.load_config()
+        self.items = {}
 
     def load_config(self):
         """
@@ -38,7 +39,9 @@ class Config:
         Returns:
             Any: The value associated with the key or the default value.
         """
-        return self.config.get(key, default)
+        value = self.config.get(key, default)
+        self.items.update({key: str(value)})
+        return value
 
     def update(self, updates: dict):
         """
