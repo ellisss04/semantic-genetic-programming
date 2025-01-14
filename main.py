@@ -43,6 +43,7 @@ if __name__ == "__main__":
     initial_depth = config.get("initial_depth", 5)
     final_depth = config.get("final_depth", 7)
     mutation_rate = config.get("mutation_rate", 0.1)
+    elitism_size = config.get("elitism_size", 1)
     output_dir = config.get("output_dir", "results/")
     population_size = config.get("population_size", 126)
     project_name = config.get("project_name", "SGP_project")
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     print(f"Project '{project_name}' initialized with population size {population_size}.")
 
     gp = GeneticProgram(use_semantics=use_semantics, semantic_threshold=semantic_threshold,
-                        population_size=population_size, initial_depth=initial_depth, final_depth=final_depth,
+                        population_size=population_size, elitism_size = elitism_size, initial_depth=initial_depth, final_depth=final_depth,
                         functions=functions, terminals=terminals, dataset=generate_dataset(),
                         tournament_size=tournament_size)
 

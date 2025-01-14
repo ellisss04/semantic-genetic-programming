@@ -1,7 +1,7 @@
 adaptive_threshold: False
 crossover_rate: 1.0
 dataset_path: datasets/symbolic_regression.csv
-elitism_size: 1
+elitism_size: 5
 independent_runs: 30
 max_generations: 200
 initial_depth: 5

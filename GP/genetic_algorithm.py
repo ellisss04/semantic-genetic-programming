@@ -16,7 +16,7 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, use_semantics: bool, semantic_threshold: float, population_size: int, initial_depth: int, final_depth:int, functions: List[Callable],
+    def __init__(self, use_semantics: bool, semantic_threshold: float, population_size: int, elitism_size: int, initial_depth: int, final_depth:int, functions: List[Callable],
                  terminals: List[Any], dataset, tournament_size: int):
         """
         Initialize the GeneticProgram instance.
@@ -30,6 +30,7 @@ class GeneticProgram:
         self.use_semantics = use_semantics
         self.population_size = population_size
         self.tournament_size = tournament_size
+        self.elitism_size = elitism_size
         self.initial_depth = initial_depth
         self.final_depth = final_depth
         self.min_depth = 3
@@ -208,9 +209,19 @@ class GeneticProgram:
 
         return -rmse, total_node_count
 
+    def elitism(self):
+        # Sort the population by fitness in descending order
+        sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=True)
+        # Return the top x candidates
+        elites = sorted_population[:self.elitism_size]
+        for ind in self.population:
+            if ind in elites:
+                self.population.remove(ind)
+        return elites
+
     def set_new_population(self, mutation_rate):
-        new_population = []
         total_node_count = 0
+        new_population = self.elitism()
         while len(new_population) < self.population_size:
 
             if self.use_semantics:
