@@ -49,6 +49,7 @@ if __name__ == "__main__":
     project_name = config.get("project_name", "SGP_project")
     seed = config.get("seed", 42)
     use_semantics = config.get("use_semantics", True)
+    adaptive_threshold = config.get("adaptive_threshold", True)
     semantic_threshold = config.get("semantic_threshold", 0.01)
     tournament_size = config.get("tournament_size", 7)
     verbose = config.get("verbose", True)
@@ -65,8 +66,8 @@ if __name__ == "__main__":
 
     print(f"Project '{project_name}' initialized with population size {population_size}.")
 
-    gp = GeneticProgram(use_semantics=use_semantics, semantic_threshold=semantic_threshold,
-                        population_size=population_size, elitism_size = elitism_size, initial_depth=initial_depth, final_depth=final_depth,
+    gp = GeneticProgram(use_semantics=use_semantics, adaptive_threshold=adaptive_threshold, semantic_threshold=semantic_threshold,
+                        population_size=population_size, elitism_size=elitism_size, initial_depth=initial_depth, final_depth=final_depth,
                         functions=functions, terminals=terminals, dataset=generate_dataset(),
                         tournament_size=tournament_size)
 

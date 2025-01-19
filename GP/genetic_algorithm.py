@@ -1,3 +1,4 @@
+import math
 import random
 from math import sqrt
 from typing import List, Callable, Any
@@ -16,7 +17,8 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, use_semantics: bool, semantic_threshold: float, population_size: int, elitism_size: int, initial_depth: int, final_depth:int, functions: List[Callable],
+    def __init__(self, use_semantics: bool, adaptive_threshold: bool, semantic_threshold: float, population_size: int,
+                 elitism_size: int, initial_depth: int, final_depth: int, functions: List[Callable],
                  terminals: List[Any], dataset, tournament_size: int):
         """
         Initialize the GeneticProgram instance.
@@ -27,48 +29,52 @@ class GeneticProgram:
             functions (List[Callable]): List of functions (e.g., add, subtract) used as operators.
             terminals (List[Any]): List of terminals (e.g., variables and constants) used as operands.
         """
+        self.max_generations = None
+        self.generation = None
         self.use_semantics = use_semantics
+        self.adaptive_threshold = adaptive_threshold
         self.population_size = population_size
         self.tournament_size = tournament_size
         self.elitism_size = elitism_size
         self.initial_depth = initial_depth
         self.final_depth = final_depth
-        self.min_depth = 3
         self.functions = functions
         self.terminals = terminals
         self.population = self.ramped_half_and_half()
         self.dataset = dataset
-        self.semantic_threshold = semantic_threshold
+        self.max_semantic_threshold = semantic_threshold
+        self.min_semantic_threshold = 0.01
+        self.current_threshold = None
 
         self.evaluated_nodes = []
         self.best_fitness_values = []
         self.avg_fitness_values = []
+        self.min_fitness_values = []
+        self.max_fitness_values = []
+        self.median_fitness_values = []
 
-        # for ind in self.population:
-        #     print(f'{ind},, ')
-
-    def generate_random_tree(self, depth, method="grow"):
+    def generate_random_tree(self, depth, chosen_depth, method):
         """
         Recursively generate a random tree using 'grow' or 'full' initialization.
         """
-        if depth == 0:
+        if depth == 1:
             return Node(random.choice(self.terminals))  # Terminal node
 
         # Full method: Always use a function node until depth = 0
         if method == "full":
             func = random.choice(self.functions)
             arity = func.__code__.co_argcount  # Determine number of children (arity)
-            children = [self.generate_random_tree(depth - 1, method) for _ in range(arity)]
+            children = [self.generate_random_tree(depth - 1, chosen_depth, method) for _ in range(arity)]
             return Node(func, children)
 
         # Grow method: Use randomness but enforce minimum depth
-        if method == "grow" and depth < 4 and random.random() > 0.5:
+        if method == "grow" and depth < chosen_depth and random.random() > 0.5:
             return Node(random.choice(self.terminals))
 
         # Otherwise, use a function node
         func = random.choice(self.functions)
         arity = func.__code__.co_argcount
-        children = [self.generate_random_tree(depth - 1, method) for _ in range(arity)]
+        children = [self.generate_random_tree(depth - 1, chosen_depth, method) for _ in range(arity)]
         return Node(func, children)
 
     def ramped_half_and_half(self):
@@ -80,13 +86,13 @@ class GeneticProgram:
 
         # Divide population into full and grow methods
         for depth in depths:
+            chosen_depth = depth
             for _ in range(self.population_size // (2 * len(depths))):
                 # Full method
-                population.append(Individual(self.generate_random_tree(depth, method="full")))
+                population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="full")))
                 # Grow method
-                population.append(Individual(self.generate_random_tree(depth, method="grow")))
+                population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="grow")))
 
-        # Shuffle population for randomness
         random.shuffle(population)
         return population
 
@@ -100,14 +106,18 @@ class GeneticProgram:
         tournament = random.sample(self.population, self.tournament_size)
         return max(tournament, key=lambda ind: ind.fitness)
 
-    def semantic_selection(self, parent_1: Individual):
+    def semantic_selection(self, parent_1: Individual) -> Individual:
         parent_semantics = parent_1.semantic_vector
+        temp_population = self.population.copy()
 
-        best_candidate = random.choice(self.population)
+        best_candidate = random.choice(temp_population)
+        temp_population.remove(best_candidate)
+
         best_fitness = best_candidate.fitness
 
-        for i in range(self.tournament_size):
-            competitor = random.choice(self.population)
+        for _ in range(self.tournament_size):
+            competitor = random.choice(temp_population)
+            temp_population.remove(competitor)
             competitor_semantics = competitor.semantic_vector
             # if semantically different
             if self.check_semantic_difference(parent_semantics, competitor_semantics):
@@ -117,15 +127,34 @@ class GeneticProgram:
 
         return best_candidate
 
+    def sigmoid_decay(self, steepness=1.0):
+        """
+        Calculate the decayed semantic threshold using a sigmoid function.
+
+        Args:
+            steepness (float): Controls how steep the decay is. Default is 1.0.
+
+        Returns:
+            float: The decayed semantic threshold.
+        """
+        midpoint = self.max_generations / 2
+        decay = 1 / (1 + math.exp(-steepness * (self.generation - midpoint)))
+        return self.max_semantic_threshold + (self.min_semantic_threshold - self.max_semantic_threshold) * decay
+
     def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
         """
         Method to check whether two individuals are semantically different.
 
         Two individuals are considered semantically different if all corresponding
         values in their vectors differ by more than or equal to the threshold.
+        If the configuration uses the adaptive threshold method, then it will use the decayed threshold
         """
-        return all(abs(val1 - val2) >= self.semantic_threshold
-                   for val1, val2 in zip(semantics_1, semantics_2))
+        if not self.adaptive_threshold:
+            return all(abs(val1 - val2) >= self.min_semantic_threshold
+                       for val1, val2 in zip(semantics_1, semantics_2))
+        else:
+            return all(abs(val1 - val2) >= 0.01
+                       for val1, val2 in zip(semantics_1, semantics_2))
 
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
         """
@@ -138,22 +167,23 @@ class GeneticProgram:
         Returns:
             Individual: New individual created from crossover.
         """
-        depth_limit = min(parent1.get_depth(), parent2.get_depth())
-        crossover_depth = random.randint(2, depth_limit)  # min depth = 2 so that only children are swapped
 
-        offspring = self.subtree_crossover(parent1.tree, parent2.tree, crossover_depth)
+        parent1_crossover_depth = random.randint(2, parent1.get_depth())
+        parent2_crossover_depth = random.randint(2, parent2.get_depth())
+
+        offspring = self.subtree_crossover(parent1.tree, parent2.tree, parent1_crossover_depth, parent2_crossover_depth)
 
         return Individual(offspring)
 
     @staticmethod
-    def subtree_crossover(parent1, parent2, depth):
+    def subtree_crossover(parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
         # Get all nodes at the specified depth
-        nodes1 = parent1.get_nodes_at_depth(depth)
+        nodes1 = parent1.get_nodes_at_depth(parent1_crossover_depth)
 
-        nodes2 = parent2.get_nodes_at_depth(depth)
+        nodes2 = parent2.get_nodes_at_depth(parent2_crossover_depth)
 
         if not nodes1 or not nodes2:
-            raise ValueError(f"No nodes found at depth {depth} in one of the parents.")
+            raise ValueError
 
         # Randomly select a node from each parent
         subtree1 = random.choice(nodes1)
@@ -180,12 +210,12 @@ class GeneticProgram:
             if random.random() < mutation_rate:
                 if callable(node.value):  # Replace operator
                     new_func = random.choice(self.functions)
-                    return Node(new_func, [mutate_node(child, child.get_depth()-1) for child in node.children])
+                    return Node(new_func, [mutate_node(child, child.get_depth() - 1) for child in node.children])
                 else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
                     return Node(new_terminal)
             if callable(node.value):  # Recurse on children
-                node.children = [mutate_node(child, child.get_depth()-1) for child in node.children]
+                node.children = [mutate_node(child, child.get_depth() - 1) for child in node.children]
             return node
 
         mutated_tree = mutate_node(individual.tree, individual.get_depth())
@@ -219,7 +249,7 @@ class GeneticProgram:
                 self.population.remove(ind)
         return elites
 
-    def set_new_population(self, mutation_rate):
+    def set_new_population(self, mutation_rate: float):
         total_node_count = 0
         new_population = self.elitism()
         while len(new_population) < self.population_size:
@@ -249,21 +279,41 @@ class GeneticProgram:
         return new_population
 
     def get_fitness_metrics(self):
-        # Calculate total, best, and average fitness
-        total_fitness = sum(ind.fitness for ind in self.population if ind.fitness is not None)
-        best_individual = max(
-            (ind for ind in self.population if ind.fitness is not None),
-            key=lambda ind: ind.fitness,
-            default=None
-        )
-        avg_fitness = total_fitness / len(self.population) if self.population else 0
+        # TODO: change metrics to show "hits" i.e if a fitness is within 0.01 of the target value
+        # Filter out individuals with None fitness values
+        fitness_values = [ind.fitness for ind in self.population if ind.fitness is not None]
 
-        # Store fitness values for this generation
+        if not fitness_values:  # Check if there are valid fitness values
+            return None, None
+
+        # Calculate total, best, and average fitness
+        total_fitness = sum(fitness_values)
+        best_individual = max(self.population, key=lambda ind: ind.fitness, default=None)
+        avg_fitness = total_fitness / len(fitness_values)
+
+        # Calculate additional metrics
+        median_fitness = np.median(fitness_values)
+        min_fitness = np.min(fitness_values)
+        max_fitness = np.max(fitness_values)
+
+        # Store fitness values for this generation (for plotting)
         if best_individual is not None:
             self.best_fitness_values.append(best_individual.fitness)
         self.avg_fitness_values.append(avg_fitness)
+        self.median_fitness_values.append(median_fitness)
+        self.min_fitness_values.append(min_fitness)
+        self.max_fitness_values.append(max_fitness)
 
-        return best_individual, avg_fitness
+        # Return a dictionary of fitness metrics
+        metrics = {
+            'best_fitness': best_individual.fitness if best_individual else None,
+            'avg_fitness': avg_fitness,
+            'median_fitness': median_fitness,
+            'min_fitness': min_fitness,
+            'max_fitness': max_fitness,
+        }
+
+        return metrics
 
     def evolve(self, generations: int, mutation_rate: float):
         """
@@ -273,25 +323,29 @@ class GeneticProgram:
             generations (int): Number of generations to evolve.
             mutation_rate (float): Probability of mutating nodes.
         """
+        self.max_generations = generations
         for generation in range(generations):
+            self.generation = generation
             # Evaluate fitness for all individuals
             for individual in self.population:
                 if individual.fitness is None:  # Only evaluate if fitness has not been assigned
                     fitness, node_count = self.fitness_function(individual)
                     individual.set_fitness(fitness)
 
-            best_individual, avg_fitness = self.get_fitness_metrics()
+            metrics = self.get_fitness_metrics()
 
-            print(f"Generation {generation}: Best Fitness = {best_individual.fitness}, "
-                  f"Average Fitness = {avg_fitness}")
+            median_fitness = metrics['median_fitness']
+            best_fitness = metrics['best_fitness']
 
+            print(f"Generation {generation}: Best Fitness = {best_fitness}, "
+                  f"Median Fitness = {median_fitness}")
+
+            self.current_threshold = self.sigmoid_decay()
             new_population = self.set_new_population(mutation_rate)
             self.population = new_population
 
         best_fitness_values = np.array(self.best_fitness_values)
-        avg_fitness_values = np.array(self.avg_fitness_values)
         best_fitness_log = np.log(np.abs(best_fitness_values))
-        avg_fitness_log = np.log(np.abs(avg_fitness_values))
 
-        plot_fitness(best_fitness_log, avg_fitness_log)
+        plot_fitness(best_fitness_log, self.median_fitness_values)
         plot_evaluated_nodes(self.evaluated_nodes)
