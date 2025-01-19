@@ -240,7 +240,7 @@ class GeneticProgram:
         return -rmse, total_node_count
 
     def elitism(self):
-        # Sort the population by fitness in descending order
+        # Sort the population by fit`ness in descending order
         sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=True)
         # Return the top x candidates
         elites = sorted_population[:self.elitism_size]
@@ -248,6 +248,40 @@ class GeneticProgram:
             if ind in elites:
                 self.population.remove(ind)
         return elites
+
+    def steady_state_population(self, mutation_rate: float):
+        total_node_count = 0
+        new_individuals = []
+        for i in range(2):
+            if self.use_semantics:
+                parent1 = self.select()
+                parent2 = self.semantic_selection(parent1)
+            else:
+                parent1, parent2 = self.select(), self.select()
+
+            if random.random() > 0.5:
+                child = self.crossover(parent1, parent2)
+            else:
+                child = self.crossover(parent2, parent1)
+
+            child = self.mutate(child, mutation_rate)
+
+            # Evaluate the child and assign its fitness
+            fitness, node_count = self.fitness_function(child)
+            child.set_fitness(fitness)  # Set the calculated fitness
+            total_node_count += node_count
+
+            new_individuals.append(child)
+
+        self.evaluated_nodes.append(total_node_count)
+
+        sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=False)
+        worst = sorted_population[:2]
+        for ind in sorted_population:
+            if ind in worst:
+                self.population.remove(ind)
+        self.population.append(new_individuals[0])
+        self.population.append(new_individuals[1])
 
     def set_new_population(self, mutation_rate: float):
         total_node_count = 0
@@ -343,9 +377,7 @@ class GeneticProgram:
             self.current_threshold = self.sigmoid_decay()
             new_population = self.set_new_population(mutation_rate)
             self.population = new_population
+            # self.steady_state_population(mutation_rate)
 
-        best_fitness_values = np.array(self.best_fitness_values)
-        best_fitness_log = np.log(np.abs(best_fitness_values))
-
-        plot_fitness(best_fitness_log, self.median_fitness_values)
+        plot_fitness(self.max_generations, self.median_fitness_values)
         plot_evaluated_nodes(self.evaluated_nodes)
