@@ -1,3 +1,4 @@
+import math
 import random
 
 import numpy as np
@@ -9,11 +10,11 @@ from config import Config
 
 
 def target_function(x):
-    return x ** 4 + x ** 3 + x ** 2 + x
+    return x ** 3 + x ** 2 + x
 
 
 def generate_dataset():
-    x_values = np.linspace(-1, 1, 20)  # 20 evenly spaced points between -10 and 10
+    x_values = np.linspace(-1, 1, 21)  # evenly spaced points between -1 and 1
     y_values = target_function(x_values)
     dataset = list(zip(x_values, y_values))
 
@@ -30,6 +31,27 @@ def multiply(x, y): return x * y
 
 
 def divide(x, y): return x / y if y != 0 else 1  # Handle division by zero
+
+
+def sin(x):
+    return math.sin(x)
+
+
+def cos(x):
+    return math.cos(x)
+
+
+def exp(x):
+    # safe exponent functionality to avoid math range error
+    if x > 10:
+        x = 10
+    elif x < -10:
+        x = -10
+    return math.exp(x)
+
+
+def log(x):
+    return math.log(x) if x > 0 else 1  # Handle log(0) or negative inputs gracefully
 
 
 if __name__ == "__main__":
@@ -56,8 +78,8 @@ if __name__ == "__main__":
 
     random.seed(seed)
 
-    functions = [add, subtract, multiply, divide]
-    terminals = ['x', 1, 2]
+    functions = [add, subtract, multiply, divide, sin, cos, exp, log]
+    terminals = ['x', 1]
     if verbose:
         print("Loaded Configuration:")
         for key, value in config.items.items():

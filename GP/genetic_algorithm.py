@@ -1,5 +1,6 @@
 import math
 import random
+import copy
 from math import sqrt
 from typing import List, Callable, Any
 
@@ -56,24 +57,23 @@ class GeneticProgram:
     def generate_random_tree(self, depth, chosen_depth, method):
         """
         Recursively generate a random tree using 'grow' or 'full' initialization.
+
+        Args:
+            depth (int): Remaining depth for the tree.
+            chosen_depth (int): Minimum depth the tree must reach.
+            method (str): Initialization method ('grow' or 'full').
+
+        Returns:
+            Node: Generated random tree.
         """
-        if depth == 1:
+        # Base case: Terminal node if at max depth or depth == 1
+        depth_threshold = abs(depth-chosen_depth)
+        if depth == 1 or (method == "grow" and depth_threshold > 2 and random.random() > 0.5):
             return Node(random.choice(self.terminals))  # Terminal node
 
-        # Full method: Always use a function node until depth = 0
-        if method == "full":
-            func = random.choice(self.functions)
-            arity = func.__code__.co_argcount  # Determine number of children (arity)
-            children = [self.generate_random_tree(depth - 1, chosen_depth, method) for _ in range(arity)]
-            return Node(func, children)
-
-        # Grow method: Use randomness but enforce minimum depth
-        if method == "grow" and depth < chosen_depth and random.random() > 0.5:
-            return Node(random.choice(self.terminals))
-
-        # Otherwise, use a function node
+        # Otherwise, generate a function node
         func = random.choice(self.functions)
-        arity = func.__code__.co_argcount
+        arity = func.__code__.co_argcount  # Determine number of children (arity)
         children = [self.generate_random_tree(depth - 1, chosen_depth, method) for _ in range(arity)]
         return Node(func, children)
 
@@ -93,7 +93,11 @@ class GeneticProgram:
                 # Grow method
                 population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="grow")))
 
+        for ind in population:
+            print(f"{ind}\n")
+
         random.shuffle(population)
+
         return population
 
     def select(self) -> Individual:
@@ -103,7 +107,8 @@ class GeneticProgram:
         Returns:
             Individual: The selected individual.
         """
-        tournament = random.sample(self.population, self.tournament_size)
+        population_copy = copy.deepcopy(self.population)
+        tournament = random.sample(population_copy, self.tournament_size)
         return max(tournament, key=lambda ind: ind.fitness)
 
     def semantic_selection(self, parent_1: Individual) -> Individual:
@@ -153,7 +158,7 @@ class GeneticProgram:
             return all(abs(val1 - val2) >= self.min_semantic_threshold
                        for val1, val2 in zip(semantics_1, semantics_2))
         else:
-            return all(abs(val1 - val2) >= 0.01
+            return all(abs(val1 - val2) >= self.current_threshold
                        for val1, val2 in zip(semantics_1, semantics_2))
 
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
@@ -168,10 +173,15 @@ class GeneticProgram:
             Individual: New individual created from crossover.
         """
 
-        parent1_crossover_depth = random.randint(2, parent1.get_depth())
-        parent2_crossover_depth = random.randint(2, parent2.get_depth())
+        parent1_copy = copy.deepcopy(parent1)
+        parent2_copy = copy.deepcopy(parent2)
 
-        offspring = self.subtree_crossover(parent1.tree, parent2.tree, parent1_crossover_depth, parent2_crossover_depth)
+        parent1_crossover_depth = random.randint(1, parent1_copy.get_depth())
+
+        parent2_crossover_depth = random.randint(1, parent2_copy.get_depth())
+
+        offspring = self.subtree_crossover(parent1_copy.tree, parent2_copy.tree,
+                                           parent1_crossover_depth, parent2_crossover_depth)
 
         return Individual(offspring)
 
@@ -179,23 +189,21 @@ class GeneticProgram:
     def subtree_crossover(parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
         # Get all nodes at the specified depth
         nodes1 = parent1.get_nodes_at_depth(parent1_crossover_depth)
-
         nodes2 = parent2.get_nodes_at_depth(parent2_crossover_depth)
 
-        if not nodes1 or not nodes2:
-            raise ValueError
-
-        # Randomly select a node from each parent
+        # Select random compatible subtrees
         subtree1 = random.choice(nodes1)
         subtree2 = random.choice(nodes2)
 
         # Perform the crossover by replacing subtrees
         offspring = parent1.replace_subtree(subtree1, subtree2)
 
+        offspring.validate_tree()
+
         return offspring
 
     def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
-        """
+        """`
         Mutate an individual by replacing nodes randomly.
 
         Args:
@@ -375,9 +383,9 @@ class GeneticProgram:
                   f"Median Fitness = {median_fitness}")
 
             self.current_threshold = self.sigmoid_decay()
-            new_population = self.set_new_population(mutation_rate)
-            self.population = new_population
-            # self.steady_state_population(mutation_rate)
+            # new_population = self.set_new_population(mutation_rate)
+            # self.population = new_population
+            self.steady_state_population(mutation_rate)
 
         plot_fitness(self.max_generations, self.median_fitness_values)
         plot_evaluated_nodes(self.evaluated_nodes)
