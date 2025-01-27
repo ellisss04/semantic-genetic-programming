@@ -46,7 +46,6 @@ class GeneticProgram:
         self.max_semantic_threshold = semantic_threshold
         self.min_semantic_threshold = 0.01
         self.current_threshold = None
-
         self.evaluated_nodes = []
         self.best_fitness_values = []
         self.avg_fitness_values = []
@@ -92,9 +91,6 @@ class GeneticProgram:
                 population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="full")))
                 # Grow method
                 population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="grow")))
-
-        for ind in population:
-            print(f"{ind}\n")
 
         random.shuffle(population)
 
@@ -185,8 +181,7 @@ class GeneticProgram:
 
         return Individual(offspring)
 
-    @staticmethod
-    def subtree_crossover(parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
+    def subtree_crossover(self, parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
         # Get all nodes at the specified depth
         nodes1 = parent1.get_nodes_at_depth(parent1_crossover_depth)
         nodes2 = parent2.get_nodes_at_depth(parent2_crossover_depth)
@@ -198,8 +193,10 @@ class GeneticProgram:
         # Perform the crossover by replacing subtrees
         offspring = parent1.replace_subtree(subtree1, subtree2)
 
-        offspring.validate_tree()
-
+        # Prune the offspring if it exceeds the maximum depth
+        # max_depth = 9
+        # if offspring.get_depth() > max_depth:
+        #     offspring.prune(self.terminals)
         return offspring
 
     def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
@@ -272,7 +269,7 @@ class GeneticProgram:
             else:
                 child = self.crossover(parent2, parent1)
 
-            child = self.mutate(child, mutation_rate)
+            # child = self.mutate(child, mutation_rate)
 
             # Evaluate the child and assign its fitness
             fitness, node_count = self.fitness_function(child)
@@ -376,16 +373,21 @@ class GeneticProgram:
 
             metrics = self.get_fitness_metrics()
 
-            median_fitness = metrics['median_fitness']
             best_fitness = metrics['best_fitness']
+            median_fitness = metrics['median_fitness']
+            mean_fitness = metrics['avg_fitness']
 
             print(f"Generation {generation}: Best Fitness = {best_fitness}, "
-                  f"Median Fitness = {median_fitness}")
+                  f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}")
 
             self.current_threshold = self.sigmoid_decay()
             # new_population = self.set_new_population(mutation_rate)
             # self.population = new_population
             self.steady_state_population(mutation_rate)
+
+        for i, val in enumerate(self.avg_fitness_values):
+            self.avg_fitness_values[i] = abs(val)
+        avg_fitness_log = np.log(self.avg_fitness_values)
 
         plot_fitness(self.max_generations, self.median_fitness_values)
         plot_evaluated_nodes(self.evaluated_nodes)

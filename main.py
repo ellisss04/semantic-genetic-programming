@@ -11,11 +11,14 @@ from config import Config
 
 def target_function(x):
     return x ** 3 + x ** 2 + x
+    # return sin(x ** 2)
 
 
 def generate_dataset():
     x_values = np.linspace(-1, 1, 21)  # evenly spaced points between -1 and 1
-    y_values = target_function(x_values)
+    y_values = []
+    for x in range(21):
+        y_values.append(target_function(x_values[x]))
     dataset = list(zip(x_values, y_values))
 
     return dataset
@@ -88,9 +91,11 @@ if __name__ == "__main__":
 
     print(f"Project '{project_name}' initialized with population size {population_size}.")
 
-    gp = GeneticProgram(use_semantics=use_semantics, adaptive_threshold=adaptive_threshold, semantic_threshold=semantic_threshold,
-                        population_size=population_size, elitism_size=elitism_size, initial_depth=initial_depth, final_depth=final_depth,
-                        functions=functions, terminals=terminals, dataset=generate_dataset(),
-                        tournament_size=tournament_size)
+    for i in range(2):
 
-    gp.evolve(generations=max_generations, mutation_rate=mutation_rate)
+        gp = GeneticProgram(use_semantics=use_semantics, adaptive_threshold=adaptive_threshold, semantic_threshold=semantic_threshold,
+                            population_size=population_size, elitism_size=elitism_size, initial_depth=initial_depth, final_depth=final_depth,
+                            functions=functions, terminals=terminals, dataset=generate_dataset(),
+                            tournament_size=tournament_size)
+
+        gp.evolve(generations=max_generations, mutation_rate=mutation_rate)

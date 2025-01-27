@@ -14,7 +14,7 @@ def plot_fitness(generations, avg_fitness):
     plt.plot(generations, avg_fitness, label="Average Fitness", color="blue")
     plt.xlabel("Generation")
     plt.ylabel("Fitness")
-    plt.title("Fitness Progression Over Generations")
+    plt.title("Median Fitness Progression")
     plt.legend()
     plt.grid()
     plt.show()
@@ -23,7 +23,7 @@ def plot_fitness(generations, avg_fitness):
 def plot_evaluated_nodes(evaluated_nodes):
     plt.figure(figsize=(10, 6))
     generations = list(range(len(evaluated_nodes)))
-    plt.plot(generations, evaluated_nodes, label="Semantics in Selection", color="red")
+    plt.plot(generations, evaluated_nodes, label="Evaluated Nodes", color="red")
     plt.xlabel("Generation")
     plt.ylabel("Number of evaluated nodes")
     plt.title("Evaluated Node Progression Over Generations")
