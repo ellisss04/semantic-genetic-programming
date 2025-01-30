@@ -11,7 +11,7 @@ from config import Config
 
 def target_function(x):
     return x ** 3 + x ** 2 + x
-    # return sin(x ** 2)
+    # return log(x+1) + log(x ** 2 + 1)
 
 
 def generate_dataset():
@@ -90,12 +90,10 @@ if __name__ == "__main__":
         input("CONFIGURED. PRESS ENTER")
 
     print(f"Project '{project_name}' initialized with population size {population_size}.")
+    gp = GeneticProgram(use_semantics=use_semantics, adaptive_threshold=adaptive_threshold, semantic_threshold=semantic_threshold,
+                        population_size=population_size, elitism_size=elitism_size, initial_depth=initial_depth, final_depth=final_depth,
+                        functions=functions, terminals=terminals, dataset=generate_dataset(),
+                        tournament_size=tournament_size)
 
-    for i in range(2):
+    gp.evolve(generations=max_generations, mutation_rate=mutation_rate)
 
-        gp = GeneticProgram(use_semantics=use_semantics, adaptive_threshold=adaptive_threshold, semantic_threshold=semantic_threshold,
-                            population_size=population_size, elitism_size=elitism_size, initial_depth=initial_depth, final_depth=final_depth,
-                            functions=functions, terminals=terminals, dataset=generate_dataset(),
-                            tournament_size=tournament_size)
-
-        gp.evolve(generations=max_generations, mutation_rate=mutation_rate)

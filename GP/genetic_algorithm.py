@@ -1,14 +1,16 @@
 import math
 import random
 import copy
+from tqdm import tqdm
 from math import sqrt
 from typing import List, Callable, Any
 
 import numpy as np
+from sklearn.decomposition import PCA
 
 from GP.node import Node
 from GP.individual import Individual
-from GP.utils import plot_fitness, plot_evaluated_nodes
+from GP.utils import plot_fitness, plot_evaluated_nodes, plot_semantic_space, get_depth_iterative
 
 
 class GeneticProgram:
@@ -26,7 +28,6 @@ class GeneticProgram:
 
         Args:
             population_size (int): Number of individuals in the population.
-            max_depth (int): Maximum depth of the trees representing individuals.
             functions (List[Callable]): List of functions (e.g., add, subtract) used as operators.
             terminals (List[Any]): List of terminals (e.g., variables and constants) used as operands.
         """
@@ -40,6 +41,7 @@ class GeneticProgram:
         self.initial_depth = initial_depth
         self.final_depth = final_depth
         self.functions = functions
+        self.function_arity_map = {}
         self.terminals = terminals
         self.population = self.ramped_half_and_half()
         self.dataset = dataset
@@ -52,6 +54,12 @@ class GeneticProgram:
         self.min_fitness_values = []
         self.max_fitness_values = []
         self.median_fitness_values = []
+
+        self.set_function_map()
+
+    def set_function_map(self):
+        for func in self.functions:
+            self.function_arity_map.update({func: func.__code__.co_argcount})
 
     def generate_random_tree(self, depth, chosen_depth, method):
         """
@@ -172,36 +180,31 @@ class GeneticProgram:
         parent1_copy = copy.deepcopy(parent1)
         parent2_copy = copy.deepcopy(parent2)
 
-        parent1_crossover_depth = random.randint(1, parent1_copy.get_depth())
+        parent1_crossover_depth = random.randint(1, get_depth_iterative(parent1_copy.tree))
 
-        parent2_crossover_depth = random.randint(1, parent2_copy.get_depth())
+        parent2_crossover_depth = random.randint(1, get_depth_iterative(parent2_copy.tree))
 
         offspring = self.subtree_crossover(parent1_copy.tree, parent2_copy.tree,
                                            parent1_crossover_depth, parent2_crossover_depth)
 
         return Individual(offspring)
 
+    @staticmethod
     def subtree_crossover(self, parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
         # Get all nodes at the specified depth
         nodes1 = parent1.get_nodes_at_depth(parent1_crossover_depth)
         nodes2 = parent2.get_nodes_at_depth(parent2_crossover_depth)
 
-        # Select random compatible subtrees
         subtree1 = random.choice(nodes1)
         subtree2 = random.choice(nodes2)
 
-        # Perform the crossover by replacing subtrees
         offspring = parent1.replace_subtree(subtree1, subtree2)
 
-        # Prune the offspring if it exceeds the maximum depth
-        # max_depth = 9
-        # if offspring.get_depth() > max_depth:
-        #     offspring.prune(self.terminals)
         return offspring
 
     def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
-        """`
-        Mutate an individual by replacing nodes randomly.
+        """
+        Mutate an individual by replacing nodes randomly, ensuring arity constraints are respected.
 
         Args:
             individual (Individual): Individual to mutate.
@@ -214,16 +217,25 @@ class GeneticProgram:
         def mutate_node(node: Node, depth: int) -> Node:
             if random.random() < mutation_rate:
                 if callable(node.value):  # Replace operator
-                    new_func = random.choice(self.functions)
-                    return Node(new_func, [mutate_node(child, child.get_depth() - 1) for child in node.children])
+                    arity = len(node.children)
+                    # Filter functions by matching arity
+                    compatible_functions = [func for func in self.functions if self.function_arity_map[func] == arity]
+                    new_func = random.choice(compatible_functions)
+                    new_children = [mutate_node(child, get_depth_iterative(child) - 1) for child in node.children]
+                    mutated_node = Node(new_func, new_children)
+                    mutated_node.update_children()
+                    return Node(new_func, [mutate_node(child, get_depth_iterative(child) - 1)
+                                           for child in node.children])
                 else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
                     return Node(new_terminal)
+
             if callable(node.value):  # Recurse on children
-                node.children = [mutate_node(child, child.get_depth() - 1) for child in node.children]
+                node.children = [mutate_node(child, get_depth_iterative(child) - 1) for child in node.children]
+                node.update_children()
             return node
 
-        mutated_tree = mutate_node(individual.tree, individual.get_depth())
+        mutated_tree = mutate_node(individual.tree, get_depth_iterative(individual.tree))
         return Individual(mutated_tree)
 
     def fitness_function(self, ind: Individual):
@@ -234,7 +246,6 @@ class GeneticProgram:
             variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
             y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
             ind.set_semantics(y_pred)
-
             error = (y_pred - y_value) ** 2
             total_error += error
             total_node_count += node_count
@@ -269,7 +280,7 @@ class GeneticProgram:
             else:
                 child = self.crossover(parent2, parent1)
 
-            # child = self.mutate(child, mutation_rate)
+            child = self.mutate(child, mutation_rate)
 
             # Evaluate the child and assign its fitness
             fitness, node_count = self.fitness_function(child)
@@ -318,7 +329,6 @@ class GeneticProgram:
         return new_population
 
     def get_fitness_metrics(self):
-        # TODO: change metrics to show "hits" i.e if a fitness is within 0.01 of the target value
         # Filter out individuals with None fitness values
         fitness_values = [ind.fitness for ind in self.population if ind.fitness is not None]
 
@@ -363,7 +373,8 @@ class GeneticProgram:
             mutation_rate (float): Probability of mutating nodes.
         """
         self.max_generations = generations
-        for generation in range(generations):
+        tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
+        for generation in tqdm_loop:
             self.generation = generation
             # Evaluate fitness for all individuals
             for individual in self.population:
@@ -377,17 +388,25 @@ class GeneticProgram:
             median_fitness = metrics['median_fitness']
             mean_fitness = metrics['avg_fitness']
 
-            print(f"Generation {generation}: Best Fitness = {best_fitness}, "
-                  f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}")
+            tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
+                                      f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
 
             self.current_threshold = self.sigmoid_decay()
-            # new_population = self.set_new_population(mutation_rate)
-            # self.population = new_population
             self.steady_state_population(mutation_rate)
 
         for i, val in enumerate(self.avg_fitness_values):
             self.avg_fitness_values[i] = abs(val)
         avg_fitness_log = np.log(self.avg_fitness_values)
 
+        semantic_vectors = []
+        fitness_values = []
+        for ind in self.population:
+            semantic_vectors.append(ind.semantic_vector)
+            fitness_values.append(ind.fitness)
+
+        pca = PCA(n_components=2)
+        reduced_semantics = pca.fit_transform(semantic_vectors)
+
+        plot_semantic_space(reduced_semantics, fitness_values)
         plot_fitness(self.max_generations, self.median_fitness_values)
-        plot_evaluated_nodes(self.evaluated_nodes)
+        # plot_evaluated_nodes(self.evaluated_nodes)

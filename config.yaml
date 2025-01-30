@@ -6,13 +6,13 @@ independent_runs: 30
 max_generations: 200
 initial_depth: 5
 final_depth: 7
-mutation_rate: 0
+mutation_rate: 0.1
 output_dir: results/
-population_size: 126
+population_size: 250
 project_name: SGP_project
 seed: 42
 use_semantics: true
-semantic_threshold: 0.05
+semantic_threshold: 0.1
 shuffle: true
 tournament_size: 7
 verbose: true

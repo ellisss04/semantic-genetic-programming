@@ -1,7 +1,7 @@
 import random
 from typing import Union, Callable, Optional, List
 import uuid
-
+import sys
 
 class Node:
     def __init__(self, value: Union[str, Callable], children: Optional[List['Node']] = None):
@@ -48,9 +48,9 @@ class Node:
         for child in self.children:
             child.validate_tree()
 
-    def evaluate(self, variables: dict) -> tuple:
+    def evaluate(self, variables: dict, visited: set = None) -> tuple:
         """
-        Iteratively evaluate the node's value based on the provided variables.
+        Evaluate the node's value based on the provided variables.
 
         Args:
             variables (dict): A dictionary mapping variable names to their values.
@@ -58,66 +58,24 @@ class Node:
         Returns:
             tuple: A tuple containing the evaluation result and the number of nodes evaluated.
         """
-        stack = [(self, False)]  # Stack for nodes to process, format: (node, is_processed)
-        node_count = 0
-        results = {}  # Map nodes to their evaluated results
+        if visited is None:
+            visited = set()
 
-        while stack:
-            current_node, is_processed = stack.pop()
+        if self.id in visited:
+            return 0, 0
 
-            if is_processed:
-                # Node has already had its children evaluated
-                if callable(current_node.value):
-                    # Collect child results in order
-                    children_results = [results[child] for child in current_node.children]
-                    # Apply the function and store the result
-                    results[current_node] = current_node.value(*children_results)
-                else:
-                    # Terminal node case
-                    results[current_node] = variables.get(current_node.value, current_node.value)
-            else:
-                # Push the current node back with a processed flag
-                stack.append((current_node, True))
+        visited.add(self.id)
+        if callable(self.value):
+            children_results, total_nodes = zip(*[child.evaluate(variables, visited) for child in self.children])
+            return self.value(*children_results), sum(total_nodes) + 1
 
-                # Push children onto the stack to process them first
-                for child in current_node.children[::-1]:  # Reverse to maintain left-to-right order
-                    stack.append((child, False))
-
-            # Count each node processed
-            node_count += 1
-
-        # The final result will be stored for the root node
-        return results[self], node_count
-
-    # def evaluate(self, variables: dict) -> tuple:
-    #     """
-    #     Evaluate the node's value based on the provided variables.
-    #
-    #     Args:
-    #         variables (dict): A dictionary mapping variable names to their values.
-    #
-    #     Returns:
-    #         tuple: A tuple containing the evaluation result and the number of nodes evaluated.
-    #     """
-    #     if callable(self.value):
-    #         # Determine the number of arguments (arity) of the function
-    #         arity = self.value.__code__.co_argcount
-    #
-    #         if len(self.children) != arity:
-    #             raise ValueError(
-    #                 f"Function {self.value.__name__} requires {arity} arguments, "
-    #                 f"but got {len(self.children)} children."
-    #             )
-    #
-    #         # Evaluate the required number of children
-    #         children_results, total_nodes = zip(*[child.evaluate(variables) for child in self.children[:arity]])
-    #         return self.value(*children_results), sum(total_nodes) + 1
-    #
-    #     # Terminal node case (variable or constant)
-    #     return variables.get(self.value, self.value), 1
+        return variables.get(self.value, self.value), 1
 
     def get_depth(self):
         current_depth = 0
+
+        if len(self.children) == 0:
+            return 1
 
         if self.left:
             current_depth = max(current_depth, self.left.get_depth())
@@ -126,6 +84,7 @@ class Node:
             current_depth = max(current_depth, self.right.get_depth())
 
         return current_depth + 1
+
 
     def get_nodes_at_depth(self, depth, current_depth=1):
         """
@@ -157,6 +116,11 @@ class Node:
             else:
                 self.children[i] = child.replace_subtree(target, replacement)
         return self
+
+    def update_children(self):
+        """Ensure left and right attributes are consistent with the children list."""
+        self.left = self.children[0] if len(self.children) > 0 else None
+        self.right = self.children[1] if len(self.children) > 1 else None
 
     def update_attributes(self, replacement, index):
         self.children[index] = replacement
