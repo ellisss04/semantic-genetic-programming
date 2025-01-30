@@ -204,7 +204,7 @@ class GeneticProgram:
 
     def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
         """
-        Mutate an individual by replacing nodes randomly, ensuring arity constraints are respected.
+        Mutate an individual by replacing nodes randomly; Using point mutation
 
         Args:
             individual (Individual): Individual to mutate.
