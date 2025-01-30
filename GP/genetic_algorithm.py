@@ -299,35 +299,6 @@ class GeneticProgram:
         self.population.append(new_individuals[0])
         self.population.append(new_individuals[1])
 
-    def set_new_population(self, mutation_rate: float):
-        total_node_count = 0
-        new_population = self.elitism()
-        while len(new_population) < self.population_size:
-
-            if self.use_semantics:
-                parent1 = self.select()
-                parent2 = self.semantic_selection(parent1)
-            else:
-                parent1, parent2 = self.select(), self.select()
-
-            if random.random() > 0.5:
-                child = self.crossover(parent1, parent2)
-            else:
-                child = self.crossover(parent2, parent1)
-
-            child = self.mutate(child, mutation_rate)
-
-            # Evaluate the child and assign its fitness
-            fitness, node_count = self.fitness_function(child)
-            child.set_fitness(fitness)  # Set the calculated fitness
-            total_node_count += node_count
-
-            new_population.append(child)
-
-        self.evaluated_nodes.append(total_node_count)
-
-        return new_population
-
     def get_fitness_metrics(self):
         # Filter out individuals with None fitness values
         fitness_values = [ind.fitness for ind in self.population if ind.fitness is not None]
