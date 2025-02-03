@@ -10,7 +10,8 @@ from sklearn.decomposition import PCA
 
 from GP.node import Node
 from GP.individual import Individual
-from GP.utils import plot_fitness, plot_evaluated_nodes, plot_semantic_space, get_depth_iterative
+from GP.utils import *
+from GP.diversity import *
 
 
 class GeneticProgram:
@@ -21,8 +22,8 @@ class GeneticProgram:
     """
 
     def __init__(self, use_semantics: bool, adaptive_threshold: bool, semantic_threshold: float, population_size: int,
-                 elitism_size: int, initial_depth: int, final_depth: int, functions: List[Callable],
-                 terminals: List[Any], dataset, tournament_size: int):
+                 elitism_size: int, mutation_rate: float, crossover_rate: int, initial_depth: int, final_depth: int,
+                 functions: List[Callable], terminals: List[Any], dataset, tournament_size: int):
         """
         Initialize the GeneticProgram instance.
 
@@ -38,6 +39,8 @@ class GeneticProgram:
         self.population_size = population_size
         self.tournament_size = tournament_size
         self.elitism_size = elitism_size
+        self.mutation_rate = mutation_rate
+        self.crossover_rate = crossover_rate
         self.initial_depth = initial_depth
         self.final_depth = final_depth
         self.functions = functions
@@ -103,6 +106,20 @@ class GeneticProgram:
         random.shuffle(population)
 
         return population
+
+    def select_parents(self):
+        """
+        Select two parents based on the selection method in use.
+        """
+        parent1 = self.select()
+        if self.use_semantics:
+            parent2 = self.semantic_selection(parent1)
+        else:
+            parent2 = self.select()
+        if random.random() > 0.5:
+            return parent1, parent2
+        else:
+            return parent2, parent1
 
     def select(self) -> Individual:
         """
@@ -190,7 +207,7 @@ class GeneticProgram:
         return Individual(offspring)
 
     @staticmethod
-    def subtree_crossover(self, parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
+    def subtree_crossover(parent1, parent2, parent1_crossover_depth, parent2_crossover_depth):
         # Get all nodes at the specified depth
         nodes1 = parent1.get_nodes_at_depth(parent1_crossover_depth)
         nodes2 = parent2.get_nodes_at_depth(parent2_crossover_depth)
@@ -202,20 +219,19 @@ class GeneticProgram:
 
         return offspring
 
-    def mutate(self, individual: Individual, mutation_rate: float) -> Individual:
+    def mutate(self, individual: Individual) -> Individual:
         """
         Mutate an individual by replacing nodes randomly; Using point mutation
 
         Args:
             individual (Individual): Individual to mutate.
-            mutation_rate (float): Probability of mutating a node.
 
         Returns:
             Individual: Mutated individual.
         """
 
         def mutate_node(node: Node, depth: int) -> Node:
-            if random.random() < mutation_rate:
+            if random.random() < self.mutation_rate:
                 if callable(node.value):  # Replace operator
                     arity = len(node.children)
                     # Filter functions by matching arity
@@ -265,26 +281,33 @@ class GeneticProgram:
                 self.population.remove(ind)
         return elites
 
-    def steady_state_population(self, mutation_rate: float):
+    def apply_crossover(self, parent1, parent2):
+        """
+        Apply crossover between two parents or clone one of them.
+        """
+        if random.random() < self.crossover_rate:
+            # Randomize crossover direction
+            if random.random() > 0.5:
+                return self.crossover(parent1, parent2)
+            else:
+                return self.crossover(parent2, parent1)
+        # Clone one of the parents
+        return parent1.clone() if random.random() < 0.5 else parent2.clone()
+
+    def steady_state_population(self):
         total_node_count = 0
         new_individuals = []
-        for i in range(2):
-            if self.use_semantics:
-                parent1 = self.select()
-                parent2 = self.semantic_selection(parent1)
-            else:
-                parent1, parent2 = self.select(), self.select()
 
-            if random.random() > 0.5:
-                child = self.crossover(parent1, parent2)
-            else:
-                child = self.crossover(parent2, parent1)
+        for _ in range(2):
+            parent1, parent2 = self.select_parents()
 
-            child = self.mutate(child, mutation_rate)
+            child = self.apply_crossover(parent1, parent2)
 
-            # Evaluate the child and assign its fitness
+            child = self.mutate(child)
+
+            # Evaluate fitness and update node count
             fitness, node_count = self.fitness_function(child)
-            child.set_fitness(fitness)  # Set the calculated fitness
+            child.set_fitness(fitness)
             total_node_count += node_count
 
             new_individuals.append(child)
@@ -363,17 +386,19 @@ class GeneticProgram:
                                       f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
 
             self.current_threshold = self.sigmoid_decay()
-            self.steady_state_population(mutation_rate)
+            self.steady_state_population()
 
-        for i, val in enumerate(self.avg_fitness_values):
-            self.avg_fitness_values[i] = abs(val)
-        avg_fitness_log = np.log(self.avg_fitness_values)
+        self.post_processing()
 
+    def post_processing(self):
         semantic_vectors = []
         fitness_values = []
         for ind in self.population:
             semantic_vectors.append(ind.semantic_vector)
             fitness_values.append(ind.fitness)
+
+        print(f'RATIO OF UNIQUE INDIVIDUALS: {track_unique_individuals(self.population)}')
+        print(f'GENOTYPIC DIVERSITY: {track_genotypic_diversity(self.population)}')
 
         pca = PCA(n_components=2)
         reduced_semantics = pca.fit_transform(semantic_vectors)

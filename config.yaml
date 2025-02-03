@@ -1,12 +1,12 @@
-adaptive_threshold: true
-crossover_rate: 1.0
+adaptive_threshold: false
 dataset_path: datasets/symbolic_regression.csv
 elitism_size: 3
 independent_runs: 30
-max_generations: 200
+max_generations: 300
 initial_depth: 5
 final_depth: 7
-mutation_rate: 0.1
+crossover_rate: 0.75
+mutation_rate: 0.2
 output_dir: results/
 population_size: 250
 project_name: SGP_project

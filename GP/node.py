@@ -1,7 +1,7 @@
 import random
 from typing import Union, Callable, Optional, List
 import uuid
-import sys
+
 
 class Node:
     def __init__(self, value: Union[str, Callable], children: Optional[List['Node']] = None):
@@ -54,6 +54,7 @@ class Node:
 
         Args:
             variables (dict): A dictionary mapping variable names to their values.
+            visited (set): A set of visited nodes to ensure evaluation is never performed twice
 
         Returns:
             tuple: A tuple containing the evaluation result and the number of nodes evaluated.
@@ -84,7 +85,6 @@ class Node:
             current_depth = max(current_depth, self.right.get_depth())
 
         return current_depth + 1
-
 
     def get_nodes_at_depth(self, depth, current_depth=1):
         """
