@@ -4,7 +4,6 @@ import random
 import copy
 import time
 
-import yaml
 from tqdm import tqdm
 from math import sqrt
 from typing import List, Callable, Any
@@ -25,9 +24,23 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, config: str, run_number: int, output_dir: str, use_semantics: bool, adaptive_threshold: bool, semantic_threshold: float, population_size: int,
-                 elitism_size: int, mutation_rate: float, crossover_rate: int, initial_depth: int, final_depth: int,
-                 functions: List[Callable], terminals: List[Any], dataset, tournament_size: int):
+    def __init__(self,
+                 config: str,
+                 run_number: int,
+                 output_dir: str,
+                 use_semantics: bool,
+                 adaptive_threshold: bool,
+                 semantic_threshold: float,
+                 population_size: int,
+                 tournament_size: int,
+                 elitism_size: int,
+                 mutation_rate: float,
+                 crossover_rate: int,
+                 initial_depth: int,
+                 final_depth: int,
+                 functions: List[Callable],
+                 terminals: List[Any],
+                 dataset: List[tuple]):
         """
         Initialize the GeneticProgram instance.
 
@@ -36,15 +49,12 @@ class GeneticProgram:
             functions (List[Callable]): List of functions (e.g., add, subtract) used as operators.
             terminals (List[Any]): List of terminals (e.g., variables and constants) used as operands.
         """
-        self.start_time = None
-        self.end_time = None
         self.config_path = config
-        self.output_dir = output_dir
         self.run_number = run_number
-        self.max_generations = None
-        self.generation = None
+        self.output_dir = output_dir
         self.use_semantics = use_semantics
         self.adaptive_threshold = adaptive_threshold
+        self.max_semantic_threshold = semantic_threshold
         self.population_size = population_size
         self.tournament_size = tournament_size
         self.elitism_size = elitism_size
@@ -53,14 +63,20 @@ class GeneticProgram:
         self.initial_depth = initial_depth
         self.final_depth = final_depth
         self.functions = functions
-        self.function_arity_map = {}
         self.terminals = terminals
-        self.population = self.ramped_half_and_half()
         self.dataset = dataset
-        self.max_semantic_threshold = semantic_threshold
+
+        self.start_time = None
+        self.end_time = None
+        self.max_generations = None
+        self.generation = None
+        self.function_arity_map = {}
+        self.population = self.ramped_half_and_half()
         self.min_semantic_threshold = 0.01
         self.current_threshold = None
         self.hit_threshold = 0.05
+
+        # Class arrays
         self.hits = []
         self.evaluated_nodes = []
         self.best_fitness_values = []
@@ -222,9 +238,9 @@ class GeneticProgram:
         parent1_copy = copy.deepcopy(parent1)
         parent2_copy = copy.deepcopy(parent2)
 
-        parent1_crossover_depth = random.randint(1, get_depth_iterative(parent1_copy.tree))
+        parent1_crossover_depth = random.randint(1, get_tree_depth(parent1_copy.tree))
 
-        parent2_crossover_depth = random.randint(1, get_depth_iterative(parent2_copy.tree))
+        parent2_crossover_depth = random.randint(1, get_tree_depth(parent2_copy.tree))
 
         offspring = self.subtree_crossover(parent1_copy.tree, parent2_copy.tree,
                                            parent1_crossover_depth, parent2_crossover_depth)
@@ -262,10 +278,10 @@ class GeneticProgram:
                     # Filter functions by matching arity
                     compatible_functions = [func for func in self.functions if self.function_arity_map[func] == arity]
                     new_func = random.choice(compatible_functions)
-                    new_children = [mutate_node(child, get_depth_iterative(child) - 1) for child in node.children]
+                    new_children = [mutate_node(child, get_tree_depth(child) - 1) for child in node.children]
                     mutated_node = Node(new_func, new_children)
                     mutated_node.update_children()
-                    return Node(new_func, [mutate_node(child, get_depth_iterative(child) - 1)
+                    return Node(new_func, [mutate_node(child, get_tree_depth(child) - 1)
                                            for child in node.children])
                 else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
@@ -274,11 +290,11 @@ class GeneticProgram:
                     return Node(new_terminal)
 
             if callable(node.value):  # Recurse on children
-                node.children = [mutate_node(child, get_depth_iterative(child) - 1) for child in node.children]
+                node.children = [mutate_node(child, get_tree_depth(child) - 1) for child in node.children]
                 node.update_children()
             return node
 
-        mutated_tree = mutate_node(individual.tree, get_depth_iterative(individual.tree))
+        mutated_tree = mutate_node(individual.tree, get_tree_depth(individual.tree))
         return Individual(mutated_tree)
 
     def fitness_function(self, ind: Individual):

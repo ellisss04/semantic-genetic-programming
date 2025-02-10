@@ -59,7 +59,7 @@ def log(x):
     return math.log(x) if x > 0 else 1  # Handle log(0) or negative inputs gracefully
 
 
-def write_config_details(output_dir, config):
+def write_config_details(output_dir, config, verbose):
     """
     Write configuration details to a file in the output directory.
 
@@ -75,7 +75,9 @@ def write_config_details(output_dir, config):
         file.write("=" * 30 + "\n")
         for key, value in config.items.items():
             file.write(f"{key}: {value}\n")
-        file.write("\nExperiment initialized.\n")
+            if verbose:
+                print(f"{key}: {value}")
+    input("CONFIGURED. PRESS ENTER")
 
 
 if __name__ == "__main__":
@@ -107,13 +109,7 @@ if __name__ == "__main__":
     functions = [add, subtract, multiply, divide, sin, cos, exp, log]
     terminals = ['x', 1]
 
-    if verbose:
-        print("Loaded Configuration:")
-        for key, value in config.items.items():
-            print(f"{key}: {value}")
-        input("CONFIGURED. PRESS ENTER")
-
-    write_config_details(output_dir, config)
+    write_config_details(output_dir, config, verbose)
 
     print("=" * 30)
     for run in range(number_of_runs):
@@ -138,5 +134,3 @@ if __name__ == "__main__":
         )
 
         gp.evolve(generations=max_generations)
-
-

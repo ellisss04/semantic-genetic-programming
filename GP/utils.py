@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 
 
-def get_depth_iterative(root):
+def get_tree_depth(root):
     if not root:
         return 0
 

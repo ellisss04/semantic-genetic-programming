@@ -3,8 +3,8 @@ seed: 42
 use_semantics: true
 adaptive_threshold: true
 elitism_size: 2
-independent_runs: 2
-max_generations: 50
+independent_runs: 30
+max_generations: 1000
 initial_depth: 3
 final_depth: 5
 tournament_size: 7
