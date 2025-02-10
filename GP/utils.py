@@ -26,12 +26,10 @@ def plot_semantic_space(reduced_semantics, fitness_values):
     plt.ylabel('PCA Dimension 2')
     plt.title('Semantic Space Visualisation')
     ax = plt.gca()
-    ax.set_xlim([-4, 4])
-    ax.set_ylim([-3, 3])
     plt.show()
 
 
-def plot_fitness(generations, avg_fitness):
+def plot_fitness(generations, avg_fitness, title, y_axis):
     """
     Plot the fitness values over generations.
 
@@ -43,8 +41,8 @@ def plot_fitness(generations, avg_fitness):
     plt.figure(figsize=(10, 6))
     plt.plot(generations, avg_fitness, label="Average Fitness", color="blue")
     plt.xlabel("Generation")
-    plt.ylabel("Fitness (logged)")
-    plt.title("Avg Fitness Progression")
+    plt.ylabel(y_axis)
+    plt.title(title)
     plt.legend()
     plt.grid()
     plt.show()

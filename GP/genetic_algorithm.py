@@ -1,6 +1,10 @@
 import math
+import os
 import random
 import copy
+import time
+
+import yaml
 from tqdm import tqdm
 from math import sqrt
 from typing import List, Callable, Any
@@ -21,7 +25,7 @@ class GeneticProgram:
     selection, crossover, and mutation to evolve solutions over generations.
     """
 
-    def __init__(self, use_semantics: bool, adaptive_threshold: bool, semantic_threshold: float, population_size: int,
+    def __init__(self, config: str, run_number: int, output_dir: str, use_semantics: bool, adaptive_threshold: bool, semantic_threshold: float, population_size: int,
                  elitism_size: int, mutation_rate: float, crossover_rate: int, initial_depth: int, final_depth: int,
                  functions: List[Callable], terminals: List[Any], dataset, tournament_size: int):
         """
@@ -32,6 +36,11 @@ class GeneticProgram:
             functions (List[Callable]): List of functions (e.g., add, subtract) used as operators.
             terminals (List[Any]): List of terminals (e.g., variables and constants) used as operands.
         """
+        self.start_time = None
+        self.end_time = None
+        self.config_path = config
+        self.output_dir = output_dir
+        self.run_number = run_number
         self.max_generations = None
         self.generation = None
         self.use_semantics = use_semantics
@@ -51,6 +60,8 @@ class GeneticProgram:
         self.max_semantic_threshold = semantic_threshold
         self.min_semantic_threshold = 0.01
         self.current_threshold = None
+        self.hit_threshold = 0.05
+        self.hits = []
         self.evaluated_nodes = []
         self.best_fitness_values = []
         self.avg_fitness_values = []
@@ -63,6 +74,15 @@ class GeneticProgram:
     def set_function_map(self):
         for func in self.functions:
             self.function_arity_map.update({func: func.__code__.co_argcount})
+
+    def get_best_individual(self):
+        best_fitness = -math.inf
+        best_individual = None
+        for ind in self.population:
+            if ind.fitness > best_fitness:
+                best_individual = ind
+                best_fitness = ind.fitness
+        return best_individual
 
     def generate_random_tree(self, depth, chosen_depth, method):
         """
@@ -152,6 +172,11 @@ class GeneticProgram:
                     best_candidate = competitor
 
         return best_candidate
+
+    def linear_decay(self):
+        decay_rate = (self.min_semantic_threshold - self.max_semantic_threshold) / self.max_generations
+
+        return self.max_semantic_threshold + decay_rate * self.generation
 
     def sigmoid_decay(self, steepness=1.0):
         """
@@ -244,6 +269,8 @@ class GeneticProgram:
                                            for child in node.children])
                 else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
+                    while node.value == new_terminal:
+                        new_terminal = random.choice(self.terminals)
                     return Node(new_terminal)
 
             if callable(node.value):  # Recurse on children
@@ -255,7 +282,7 @@ class GeneticProgram:
         return Individual(mutated_tree)
 
     def fitness_function(self, ind: Individual):
-        total_error = 0  # Initialize total error for the individual
+        total_error = 0
         total_node_count = 0
 
         for x_value, y_value in self.dataset:
@@ -265,6 +292,9 @@ class GeneticProgram:
             error = (y_pred - y_value) ** 2
             total_error += error
             total_node_count += node_count
+
+            if abs(y_pred - y_value) < self.hit_threshold:
+                ind.hits += 1
 
         mse = total_error / len(self.dataset)  # Calculate the mean squared error
         rmse = sqrt(mse)
@@ -295,6 +325,10 @@ class GeneticProgram:
         return parent1.clone() if random.random() < 0.5 else parent2.clone()
 
     def steady_state_population(self):
+
+        # self.current_threshold = self.sigmoid_decay()
+        self.current_threshold = self.linear_decay()
+
         total_node_count = 0
         new_individuals = []
 
@@ -358,16 +392,16 @@ class GeneticProgram:
 
         return metrics
 
-    def evolve(self, generations: int, mutation_rate: float):
+    def evolve(self, generations: int):
         """
         Run the genetic programming evolutionary process.
 
         Args:
             generations (int): Number of generations to evolve.
-            mutation_rate (float): Probability of mutating nodes.
         """
         self.max_generations = generations
         tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
+        self.start_time = time.time()
         for generation in tqdm_loop:
             self.generation = generation
             # Evaluate fitness for all individuals
@@ -385,10 +419,12 @@ class GeneticProgram:
             tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
                                       f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
 
-            self.current_threshold = self.sigmoid_decay()
             self.steady_state_population()
 
+        self.end_time = time.time()
+
         self.post_processing()
+        self.write_receipt()
 
     def post_processing(self):
         semantic_vectors = []
@@ -397,12 +433,50 @@ class GeneticProgram:
             semantic_vectors.append(ind.semantic_vector)
             fitness_values.append(ind.fitness)
 
-        print(f'RATIO OF UNIQUE INDIVIDUALS: {track_unique_individuals(self.population)}')
-        print(f'GENOTYPIC DIVERSITY: {track_genotypic_diversity(self.population)}')
-
         pca = PCA(n_components=2)
         reduced_semantics = pca.fit_transform(semantic_vectors)
 
+        for i, val in enumerate(self.avg_fitness_values):
+            self.avg_fitness_values[i] = abs(val)
+        avg_fitness_values_logged = np.log(self.avg_fitness_values)
+
         plot_semantic_space(reduced_semantics, fitness_values)
-        plot_fitness(self.max_generations, self.median_fitness_values)
-        # plot_evaluated_nodes(self.evaluated_nodes)
+        plot_fitness(self.max_generations, self.median_fitness_values,
+                     title="Median fitness across generations", y_axis="Median fitness value")
+        plot_fitness(self.max_generations, avg_fitness_values_logged,
+                     title="Mean average fitness across generations (logged)", y_axis="Mean fitness value")
+
+    def write_receipt(self):
+        # Ensure the output directory exists
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        # Collect metrics and experiment details
+        metrics = self.get_fitness_metrics()
+        final_median_fitness = metrics['median_fitness']
+        final_mean_fitness = metrics['avg_fitness']
+        best_individual = self.get_best_individual()
+        unique_individuals = track_unique_individuals(self.population)
+
+        # Prepare receipt content
+        receipt_content = [
+            f"RUN {self.run_number + 1}",
+            "=" * 30,
+            "Experiment Metrics:",
+            f"Final Median Fitness: {final_median_fitness}",
+            f"Final Mean Fitness: {final_mean_fitness}",
+            f"Best Individual Tree: {best_individual}",
+            f"Best Individual Fitness: {best_individual.fitness}",
+            f"Ratio of Unique Individuals : Population: {unique_individuals}",
+            f"Time to Complete: {self.end_time - self.start_time}s",
+            "\n"
+        ]
+
+        receipt_filename = os.path.join(self.output_dir, "experiment_receipt.txt")
+
+        # Write content to the receipt file
+        try:
+            with open(receipt_filename, 'a') as receipt_file:
+                receipt_file.write("\n")
+                receipt_file.write("\n".join(receipt_content))
+        except IOError as e:
+            print(f"Error writing to receipt file: {e}")

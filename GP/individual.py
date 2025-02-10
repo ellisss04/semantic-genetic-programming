@@ -8,6 +8,7 @@ class Individual:
         self.tree = tree
         self.fitness = None  # Fitness will be assigned later
         self.semantic_vector = []
+        self.hits = 0
 
     def set_fitness(self, fitness: float):
         self.fitness = fitness

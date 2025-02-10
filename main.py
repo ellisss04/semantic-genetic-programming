@@ -2,6 +2,8 @@ import math
 import random
 
 import numpy as np
+import yaml
+
 from GP.genetic_algorithm import GeneticProgram
 
 import os
@@ -57,6 +59,25 @@ def log(x):
     return math.log(x) if x > 0 else 1  # Handle log(0) or negative inputs gracefully
 
 
+def write_config_details(output_dir, config):
+    """
+    Write configuration details to a file in the output directory.
+
+    Args:
+        output_dir (str): Path to the output directory.
+        config (Config): Configuration object containing experiment details.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    config_file = os.path.join(output_dir, "experiment_receipt.txt")
+
+    with open(config_file, "w") as file:
+        file.write("Configuration Details\n")
+        file.write("=" * 30 + "\n")
+        for key, value in config.items.items():
+            file.write(f"{key}: {value}\n")
+        file.write("\nExperiment initialized.\n")
+
+
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(script_dir, "config.yaml")
@@ -79,22 +100,43 @@ if __name__ == "__main__":
     semantic_threshold = config.get("semantic_threshold", 0.01)
     tournament_size = config.get("tournament_size", 7)
     verbose = config.get("verbose", True)
+    number_of_runs = config.get("independent_runs", 30)
 
     random.seed(seed)
 
     functions = [add, subtract, multiply, divide, sin, cos, exp, log]
     terminals = ['x', 1]
+
     if verbose:
         print("Loaded Configuration:")
         for key, value in config.items.items():
             print(f"{key}: {value}")
         input("CONFIGURED. PRESS ENTER")
 
-    print(f"Project '{project_name}' initialized with population size {population_size}.")
-    gp = GeneticProgram(use_semantics=use_semantics, adaptive_threshold=adaptive_threshold,
-                        semantic_threshold=semantic_threshold, population_size=population_size,
-                        elitism_size=elitism_size, crossover_rate=crossover_rate, mutation_rate=mutation_rate,
-                        initial_depth=initial_depth, final_depth=final_depth, functions=functions, terminals=terminals,
-                        dataset=generate_dataset(), tournament_size=tournament_size)
+    write_config_details(output_dir, config)
 
-    gp.evolve(generations=max_generations, mutation_rate=mutation_rate)
+    print("=" * 30)
+    for run in range(number_of_runs):
+        print(f"Run {run + 1}")
+        gp = GeneticProgram(
+            config=config_path,
+            run_number=run,
+            output_dir=output_dir,
+            use_semantics=use_semantics,
+            adaptive_threshold=adaptive_threshold,
+            semantic_threshold=semantic_threshold,
+            population_size=population_size,
+            elitism_size=elitism_size,
+            crossover_rate=crossover_rate,
+            mutation_rate=mutation_rate,
+            initial_depth=initial_depth,
+            final_depth=final_depth,
+            functions=functions,
+            terminals=terminals,
+            dataset=generate_dataset(),
+            tournament_size=tournament_size,
+        )
+
+        gp.evolve(generations=max_generations)
+
+
