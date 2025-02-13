@@ -1,3 +1,4 @@
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -17,6 +18,12 @@ def get_tree_depth(root):
             stack.append((node.right, depth + 1))
 
     return max_depth
+
+
+def log_list(array):
+    for i, val in enumerate(array):
+        array[i] = abs(val)
+    return np.log(array)
 
 
 def plot_semantic_space(reduced_semantics, fitness_values):
@@ -55,6 +62,30 @@ def plot_evaluated_nodes(evaluated_nodes):
     plt.xlabel("Generation")
     plt.ylabel("Number of evaluated nodes")
     plt.title("Evaluated Node Progression Over Generations")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+def plot_semantic_diversity(generations, semantic_diversity):
+    plt.figure(figsize=(10, 6))
+    generations = list(range(generations))
+    plt.plot(generations, semantic_diversity, label="Semantic Diversity", color="green")
+    plt.xlabel("Generation")
+    plt.ylabel("Semantic diversity (logged)")
+    plt.title("Semantic diversity progression over generations")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+def plot_fitness_diversity(generations, fitness_diversity):
+    plt.figure(figsize=(10, 6))
+    generations = list(range(generations))
+    plt.plot(generations, fitness_diversity, label="Fitness Diversity", color="green")
+    plt.xlabel("Generation")
+    plt.ylabel("Fitness diversity (standard deviation)(logged)")
+    plt.title("Fitness diversity progression over generations")
     plt.legend()
     plt.grid()
     plt.show()

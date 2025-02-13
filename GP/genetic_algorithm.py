@@ -28,6 +28,7 @@ class GeneticProgram:
                  config: str,
                  run_number: int,
                  output_dir: str,
+                 max_generations: int,
                  use_semantics: bool,
                  adaptive_threshold: bool,
                  semantic_threshold: float,
@@ -52,6 +53,7 @@ class GeneticProgram:
         self.config_path = config
         self.run_number = run_number
         self.output_dir = output_dir
+        self.max_generations = max_generations
         self.use_semantics = use_semantics
         self.adaptive_threshold = adaptive_threshold
         self.max_semantic_threshold = semantic_threshold
@@ -68,7 +70,6 @@ class GeneticProgram:
 
         self.start_time = None
         self.end_time = None
-        self.max_generations = None
         self.generation = None
         self.function_arity_map = {}
         self.population = self.ramped_half_and_half()
@@ -84,6 +85,8 @@ class GeneticProgram:
         self.min_fitness_values = []
         self.max_fitness_values = []
         self.median_fitness_values = []
+        self.semantic_diversity_values = []
+        self.fitness_diversity_values = []
 
         self.set_function_map()
 
@@ -189,6 +192,21 @@ class GeneticProgram:
 
         return best_candidate
 
+    def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
+        """
+        Method to check whether two individuals are semantically different.
+
+        Two individuals are considered semantically different if all corresponding
+        values in their vectors differ by more than or equal to the threshold.
+        If the configuration uses the adaptive threshold method, then it will use the decayed threshold
+        """
+        if not self.adaptive_threshold:
+            return all(abs(val1 - val2) >= self.min_semantic_threshold
+                       for val1, val2 in zip(semantics_1, semantics_2))
+        else:
+            return all(abs(val1 - val2) >= self.current_threshold
+                       for val1, val2 in zip(semantics_1, semantics_2))
+
     def linear_decay(self):
         decay_rate = (self.min_semantic_threshold - self.max_semantic_threshold) / self.max_generations
 
@@ -207,21 +225,6 @@ class GeneticProgram:
         midpoint = self.max_generations / 2
         decay = 1 / (1 + math.exp(-steepness * (self.generation - midpoint)))
         return self.max_semantic_threshold + (self.min_semantic_threshold - self.max_semantic_threshold) * decay
-
-    def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
-        """
-        Method to check whether two individuals are semantically different.
-
-        Two individuals are considered semantically different if all corresponding
-        values in their vectors differ by more than or equal to the threshold.
-        If the configuration uses the adaptive threshold method, then it will use the decayed threshold
-        """
-        if not self.adaptive_threshold:
-            return all(abs(val1 - val2) >= self.min_semantic_threshold
-                       for val1, val2 in zip(semantics_1, semantics_2))
-        else:
-            return all(abs(val1 - val2) >= self.current_threshold
-                       for val1, val2 in zip(semantics_1, semantics_2))
 
     def crossover(self, parent1: Individual, parent2: Individual) -> Individual:
         """
@@ -260,6 +263,19 @@ class GeneticProgram:
 
         return offspring
 
+    def apply_crossover(self, parent1, parent2):
+        """
+        Apply crossover between two parents or clone one of them.
+        """
+        if random.random() < self.crossover_rate:
+            # Randomize crossover direction
+            if random.random() > 0.5:
+                return self.crossover(parent1, parent2)
+            else:
+                return self.crossover(parent2, parent1)
+        # Clone one of the parents
+        return parent1.clone() if random.random() < 0.5 else parent2.clone()
+
     def mutate(self, individual: Individual) -> Individual:
         """
         Mutate an individual by replacing nodes randomly; Using point mutation
@@ -297,6 +313,16 @@ class GeneticProgram:
         mutated_tree = mutate_node(individual.tree, get_tree_depth(individual.tree))
         return Individual(mutated_tree)
 
+    def elitism(self):
+        # Sort the population by fit`ness in descending order
+        sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=True)
+        # Return the top x candidates
+        elites = sorted_population[:self.elitism_size]
+        for ind in self.population:
+            if ind in elites:
+                self.population.remove(ind)
+        return elites
+
     def fitness_function(self, ind: Individual):
         total_error = 0
         total_node_count = 0
@@ -317,28 +343,11 @@ class GeneticProgram:
 
         return -rmse, total_node_count
 
-    def elitism(self):
-        # Sort the population by fit`ness in descending order
-        sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=True)
-        # Return the top x candidates
-        elites = sorted_population[:self.elitism_size]
-        for ind in self.population:
-            if ind in elites:
-                self.population.remove(ind)
-        return elites
-
-    def apply_crossover(self, parent1, parent2):
-        """
-        Apply crossover between two parents or clone one of them.
-        """
-        if random.random() < self.crossover_rate:
-            # Randomize crossover direction
-            if random.random() > 0.5:
-                return self.crossover(parent1, parent2)
-            else:
-                return self.crossover(parent2, parent1)
-        # Clone one of the parents
-        return parent1.clone() if random.random() < 0.5 else parent2.clone()
+    def set_fitness_if_none(self):
+        for individual in self.population:
+            if individual.fitness is None:  # Only evaluate if fitness has not been assigned
+                fitness, node_count = self.fitness_function(individual)
+                individual.set_fitness(fitness)
 
     def steady_state_population(self):
 
@@ -371,6 +380,36 @@ class GeneticProgram:
                 self.population.remove(ind)
         self.population.append(new_individuals[0])
         self.population.append(new_individuals[1])
+
+    def evolve(self):
+        """
+        Run the genetic programming evolutionary process.
+        """
+        tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
+        self.start_time = time.time()
+        for generation in tqdm_loop:
+            self.generation = generation
+            self.set_fitness_if_none()
+
+            metrics = self.get_fitness_metrics()
+
+            best_fitness = metrics['best_fitness']
+            median_fitness = metrics['median_fitness']
+            mean_fitness = metrics['avg_fitness']
+            if mean_fitness < -20 and self.generation > 100:
+                pass
+            tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
+                                      f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
+
+            self.semantic_diversity_values.append(set_semantic_diversity(self.population))
+            self.fitness_diversity_values.append(set_fitness_diversity(self.population))
+
+            self.steady_state_population()
+
+        self.end_time = time.time()
+
+        self.post_processing()
+        self.write_receipt()
 
     def get_fitness_metrics(self):
         # Filter out individuals with None fitness values
@@ -408,40 +447,6 @@ class GeneticProgram:
 
         return metrics
 
-    def evolve(self, generations: int):
-        """
-        Run the genetic programming evolutionary process.
-
-        Args:
-            generations (int): Number of generations to evolve.
-        """
-        self.max_generations = generations
-        tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
-        self.start_time = time.time()
-        for generation in tqdm_loop:
-            self.generation = generation
-            # Evaluate fitness for all individuals
-            for individual in self.population:
-                if individual.fitness is None:  # Only evaluate if fitness has not been assigned
-                    fitness, node_count = self.fitness_function(individual)
-                    individual.set_fitness(fitness)
-
-            metrics = self.get_fitness_metrics()
-
-            best_fitness = metrics['best_fitness']
-            median_fitness = metrics['median_fitness']
-            mean_fitness = metrics['avg_fitness']
-
-            tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
-                                      f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
-
-            self.steady_state_population()
-
-        self.end_time = time.time()
-
-        self.post_processing()
-        self.write_receipt()
-
     def post_processing(self):
         semantic_vectors = []
         fitness_values = []
@@ -452,15 +457,28 @@ class GeneticProgram:
         pca = PCA(n_components=2)
         reduced_semantics = pca.fit_transform(semantic_vectors)
 
-        for i, val in enumerate(self.avg_fitness_values):
-            self.avg_fitness_values[i] = abs(val)
-        avg_fitness_values_logged = np.log(self.avg_fitness_values)
+        avg_fitness_values_logged = log_list(self.avg_fitness_values)
+        semantic_diversity_values_logged = log_list(self.semantic_diversity_values)
+        fitness_diversity_values_logged = log_list(self.fitness_diversity_values)
 
-        plot_semantic_space(reduced_semantics, fitness_values)
-        plot_fitness(self.max_generations, self.median_fitness_values,
-                     title="Median fitness across generations", y_axis="Median fitness value")
-        plot_fitness(self.max_generations, avg_fitness_values_logged,
-                     title="Mean average fitness across generations (logged)", y_axis="Mean fitness value")
+        plot_semantic_space(reduced_semantics,
+                            fitness_values)
+
+        plot_fitness(self.max_generations,
+                     self.median_fitness_values,
+                     title="Median fitness across generations",
+                     y_axis="Median fitness value")
+
+        plot_fitness(self.max_generations,
+                     avg_fitness_values_logged,
+                     title="Mean average fitness across generations (logged)",
+                     y_axis="Mean fitness value")
+
+        plot_semantic_diversity(self.max_generations,
+                                semantic_diversity_values_logged)
+
+        plot_fitness_diversity(self.max_generations,
+                               fitness_diversity_values_logged)
 
     def write_receipt(self):
         # Ensure the output directory exists
@@ -473,7 +491,6 @@ class GeneticProgram:
         best_individual = self.get_best_individual()
         unique_individuals = track_unique_individuals(self.population)
 
-        # Prepare receipt content
         receipt_content = [
             f"RUN {self.run_number + 1}",
             "=" * 30,
@@ -489,7 +506,6 @@ class GeneticProgram:
 
         receipt_filename = os.path.join(self.output_dir, "experiment_receipt.txt")
 
-        # Write content to the receipt file
         try:
             with open(receipt_filename, 'a') as receipt_file:
                 receipt_file.write("\n")

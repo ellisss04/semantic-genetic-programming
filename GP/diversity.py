@@ -1,10 +1,11 @@
+import statistics
+
 import numpy as np
-from collections import Counter
 
 
-def track_fitness_diversity(population):
+def set_fitness_diversity(population):
     fitness_values = [ind.fitness for ind in population]
-    return np.std(fitness_values)  # Standard deviation of fitness
+    return statistics.stdev(fitness_values) if len(fitness_values) > 1 else 0
 
 
 def track_genotypic_diversity(population):
@@ -20,11 +21,26 @@ def track_unique_individuals(population):
     return len(unique_individuals) / len(population)
 
 
-def track_shannon_entropy(population):
-    fitness_values = [ind.fitness for ind in population]
-    freq = Counter(fitness_values)
-    total = sum(freq.values())
-    probabilities = [count / total for count in freq.values()]
-    return -sum(p * np.log2(p) for p in probabilities if p > 0)
+def set_semantic_diversity(population):
+    """
+    Computes semantic diversity as the average pairwise distance between
+    individuals' semantics across the dataset.
 
+    Args:
+        population (list): List of individuals in the population.
 
+    Returns:
+        float: Average pairwise semantic diversity.
+    """
+    semantics = [ind.semantic_vector for ind in population]  # List of semantic lists
+    pairwise_distances = []
+
+    for i in range(len(semantics)):
+        for j in range(i + 1, len(semantics)):
+            # Compute semantic distance as the average element-wise difference
+            distance = sum(
+                abs(semantics[i][k] - semantics[j][k]) for k in range(len(semantics[i]))
+            ) / len(semantics[i])
+            pairwise_distances.append(distance)
+
+    return sum(pairwise_distances) / len(pairwise_distances) if pairwise_distances else 0

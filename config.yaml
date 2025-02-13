@@ -1,9 +1,9 @@
-output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\experiment_1
+output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\experiment_2\trad_gp
 seed: 42
 use_semantics: true
 adaptive_threshold: true
 elitism_size: 2
-independent_runs: 30
+independent_runs: 10
 max_generations: 1000
 initial_depth: 3
 final_depth: 5

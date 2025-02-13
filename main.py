@@ -13,7 +13,7 @@ from config import Config
 
 def target_function(x):
     return x ** 3 + x ** 2 + x
-    # return log(x+1) + log(x ** 2 + 1)
+    # return sin(x**2) * cos(x)
 
 
 def generate_dataset():
@@ -47,11 +47,11 @@ def cos(x):
 
 
 def exp(x):
-    # safe exponent functionality to avoid math range error
-    if x > 10:
-        x = 10
-    elif x < -10:
-        x = -10
+    # safe exponent functionality to avoid extreme outliers
+    if x > 1:
+        x = 1
+    elif x < -1:
+        x = -1
     return math.exp(x)
 
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     random.seed(seed)
 
-    functions = [add, subtract, multiply, divide, sin, cos, exp, log]
+    functions = [add, subtract, multiply, divide, sin, cos, log, exp]
     terminals = ['x', 1]
 
     write_config_details(output_dir, config, verbose)
@@ -118,6 +118,7 @@ if __name__ == "__main__":
             config=config_path,
             run_number=run,
             output_dir=output_dir,
+            max_generations=max_generations,
             use_semantics=use_semantics,
             adaptive_threshold=adaptive_threshold,
             semantic_threshold=semantic_threshold,
@@ -133,4 +134,4 @@ if __name__ == "__main__":
             tournament_size=tournament_size,
         )
 
-        gp.evolve(generations=max_generations)
+        gp.evolve()
