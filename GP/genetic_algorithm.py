@@ -396,8 +396,7 @@ class GeneticProgram:
             best_fitness = metrics['best_fitness']
             median_fitness = metrics['median_fitness']
             mean_fitness = metrics['avg_fitness']
-            if mean_fitness < -20 and self.generation > 100:
-                pass
+
             tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
                                       f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
 
@@ -450,16 +449,17 @@ class GeneticProgram:
     def post_processing(self):
         semantic_vectors = []
         fitness_values = []
+        avg_fitness_values_abs = []
+
         for ind in self.population:
             semantic_vectors.append(ind.semantic_vector)
             fitness_values.append(ind.fitness)
 
+        for fitness in self.avg_fitness_values:
+            avg_fitness_values_abs.append(abs(fitness))
+
         pca = PCA(n_components=2)
         reduced_semantics = pca.fit_transform(semantic_vectors)
-
-        avg_fitness_values_logged = log_list(self.avg_fitness_values)
-        semantic_diversity_values_logged = log_list(self.semantic_diversity_values)
-        fitness_diversity_values_logged = log_list(self.fitness_diversity_values)
 
         plot_semantic_space(reduced_semantics,
                             fitness_values)
@@ -470,15 +470,16 @@ class GeneticProgram:
                      y_axis="Median fitness value")
 
         plot_fitness(self.max_generations,
-                     avg_fitness_values_logged,
+                     avg_fitness_values_abs,
                      title="Mean average fitness across generations (logged)",
-                     y_axis="Mean fitness value")
+                     y_axis="Mean fitness value",
+                     y_scale="log")
 
         plot_semantic_diversity(self.max_generations,
-                                semantic_diversity_values_logged)
+                                self.semantic_diversity_values)
 
         plot_fitness_diversity(self.max_generations,
-                               fitness_diversity_values_logged)
+                               self.fitness_diversity_values)
 
     def write_receipt(self):
         # Ensure the output directory exists

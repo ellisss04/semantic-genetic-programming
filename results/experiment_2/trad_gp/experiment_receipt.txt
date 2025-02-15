@@ -16,3 +16,14 @@ adaptive_threshold: True
 semantic_threshold: 0.1
 tournament_size: 7
 verbose: True
+
+RUN 1
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.42263136117027467
+Final Mean Fitness: -0.36494192717057766
+Best Individual Tree: (multiply x (add (multiply x x) (add x 1)))
+Best Individual Fitness: -8.735188044777722e-17
+Ratio of Unique Individuals : Population: 0.7878787878787878
+Time to Complete: 210.20489144325256s
+

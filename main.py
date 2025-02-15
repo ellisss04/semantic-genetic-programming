@@ -48,10 +48,10 @@ def cos(x):
 
 def exp(x):
     # safe exponent functionality to avoid extreme outliers
-    if x > 1:
-        x = 1
-    elif x < -1:
-        x = -1
+    if x > 2:
+        x = 2
+    elif x < -2:
+        x = -2
     return math.exp(x)
 
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     random.seed(seed)
 
-    functions = [add, subtract, multiply, divide, sin, cos, log, exp]
+    functions = [add, subtract, multiply, divide, sin, cos]
     terminals = ['x', 1]
 
     write_config_details(output_dir, config, verbose)

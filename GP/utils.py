@@ -20,12 +20,6 @@ def get_tree_depth(root):
     return max_depth
 
 
-def log_list(array):
-    for i, val in enumerate(array):
-        array[i] = abs(val)
-    return np.log(array)
-
-
 def plot_semantic_space(reduced_semantics, fitness_values):
     plt.scatter(reduced_semantics[:, 0], reduced_semantics[:, 1], c=fitness_values, cmap='viridis')
     plt.colorbar(label='Fitness')
@@ -36,19 +30,23 @@ def plot_semantic_space(reduced_semantics, fitness_values):
     plt.show()
 
 
-def plot_fitness(generations, avg_fitness, title, y_axis):
+def plot_fitness(generations, avg_fitness, title, y_axis, y_scale="linear"):
     """
     Plot the fitness values over generations.
 
     Args:
         generations: Number of generations
         avg_fitness : List of average fitness values for each generation.
+        title:
+        y_axis:
+        y_scale:
     """
     generations = list(range(generations))
     plt.figure(figsize=(10, 6))
     plt.plot(generations, avg_fitness, label="Average Fitness", color="blue")
     plt.xlabel("Generation")
     plt.ylabel(y_axis)
+    plt.yscale(y_scale)
     plt.title(title)
     plt.legend()
     plt.grid()
@@ -84,7 +82,8 @@ def plot_fitness_diversity(generations, fitness_diversity):
     generations = list(range(generations))
     plt.plot(generations, fitness_diversity, label="Fitness Diversity", color="green")
     plt.xlabel("Generation")
-    plt.ylabel("Fitness diversity (standard deviation)(logged)")
+    plt.ylabel("Fitness diversity (standard deviation)")
+    plt.yscale("log")
     plt.title("Fitness diversity progression over generations")
     plt.legend()
     plt.grid()
