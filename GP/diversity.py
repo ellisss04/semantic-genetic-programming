@@ -1,3 +1,4 @@
+import math
 import statistics
 
 import numpy as np
@@ -5,6 +6,9 @@ import numpy as np
 
 def set_fitness_diversity(population):
     fitness_values = [ind.fitness for ind in population]
+    for i, val in enumerate(fitness_values):
+        fitness_values[i] = abs(val)
+    fitness_values = np.log(fitness_values)
     return statistics.stdev(fitness_values) if len(fitness_values) > 1 else 0
 
 

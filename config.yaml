@@ -1,4 +1,4 @@
-output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\experiment_2\trad_gp
+output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\dump\dump.txt
 seed: 42
 use_semantics: true
 adaptive_threshold: true
