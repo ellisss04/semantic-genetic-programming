@@ -1,4 +1,5 @@
 import math
+from GP.utils import get_pairwise_distance
 import statistics
 
 import numpy as np
@@ -36,15 +37,12 @@ def set_semantic_diversity(population):
     Returns:
         float: Average pairwise semantic diversity.
     """
-    semantics = [ind.semantic_vector for ind in population]  # List of semantic lists
-    pairwise_distances = []
+    pairwise_matrix = get_pairwise_distance(population)
 
-    for i in range(len(semantics)):
-        for j in range(i + 1, len(semantics)):
-            # Compute semantic distance as the average element-wise difference
-            distance = sum(
-                abs(semantics[i][k] - semantics[j][k]) for k in range(len(semantics[i]))
-            ) / len(semantics[i])
-            pairwise_distances.append(distance)
+    # Extract the upper triangle of the matrix without the diagonal
+    n = len(population)
+    upper_triangle = pairwise_matrix[np.triu_indices(n, k=1)]
 
-    return sum(pairwise_distances) / len(pairwise_distances) if pairwise_distances else 0
+    # Compute the average pairwise semantic diversity
+    return np.mean(upper_triangle) if len(upper_triangle) > 0 else 0
+

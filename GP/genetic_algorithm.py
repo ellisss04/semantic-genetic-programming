@@ -8,13 +8,12 @@ from tqdm import tqdm
 from math import sqrt
 from typing import List, Callable, Any
 
-import numpy as np
 from sklearn.decomposition import PCA
 
 from GP.node import Node
 from GP.individual import Individual
 from GP.utils import *
-from GP.diversity import *
+from GP.diversity import set_fitness_diversity, set_semantic_diversity, track_unique_individuals
 
 
 class GeneticProgram:
@@ -464,6 +463,8 @@ class GeneticProgram:
         plot_semantic_space(reduced_semantics,
                             fitness_values)
 
+        plot_semantic_heatmap(self.population)
+
         plot_fitness(self.max_generations,
                      self.median_fitness_values,
                      title="Median fitness across generations",
@@ -485,7 +486,6 @@ class GeneticProgram:
         # Ensure the output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
 
-        # Collect metrics and experiment details
         metrics = self.get_fitness_metrics()
         final_median_fitness = metrics['median_fitness']
         final_mean_fitness = metrics['avg_fitness']
