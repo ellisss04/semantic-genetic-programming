@@ -1,10 +1,10 @@
 output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\dump\dump.txt
 seed: 42
-use_semantics: true
-adaptive_threshold: true
+use_semantics: false
+adaptive_threshold: false
 elitism_size: 2
 independent_runs: 10
-max_generations: 10
+max_generations: 1000
 initial_depth: 3
 final_depth: 5
 tournament_size: 7

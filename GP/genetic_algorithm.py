@@ -102,6 +102,18 @@ class GeneticProgram:
                 best_fitness = ind.fitness
         return best_individual
 
+    def get_pop_semantic_vectors(self):
+        semantic_vectors = []
+        for ind in self.population:
+            semantic_vectors.append(ind.semantic_vector)
+        return semantic_vectors
+
+    def get_pop_fitness_values(self):
+        fitness_values = []
+        for ind in self.population:
+            fitness_values.append(ind.fitness)
+        return fitness_values
+
     def generate_random_tree(self, depth, chosen_depth, method):
         """
         Recursively generate a random tree using 'grow' or 'full' initialization.
@@ -399,8 +411,14 @@ class GeneticProgram:
             tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
                                       f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
 
-            self.semantic_diversity_values.append(set_semantic_diversity(self.population))
-            self.fitness_diversity_values.append(set_fitness_diversity(self.population))
+            # self.semantic_diversity_values.append(set_semantic_diversity(self.population))
+            # self.fitness_diversity_values.append(set_fitness_diversity(self.population))
+
+            if self.generation == self.max_generations/2 and self.generation == 0:
+                fitness_values = self.get_pop_fitness_values()
+                semantic_vectors = self.get_pop_semantic_vectors()
+
+                plot_semantic_space(semantic_vectors, fitness_values)
 
             self.steady_state_population()
 
@@ -446,21 +464,14 @@ class GeneticProgram:
         return metrics
 
     def post_processing(self):
-        semantic_vectors = []
-        fitness_values = []
+        semantic_vectors = self.get_pop_semantic_vectors()
+        fitness_values = self.get_pop_fitness_values()
         avg_fitness_values_abs = []
-
-        for ind in self.population:
-            semantic_vectors.append(ind.semantic_vector)
-            fitness_values.append(ind.fitness)
 
         for fitness in self.avg_fitness_values:
             avg_fitness_values_abs.append(abs(fitness))
 
-        pca = PCA(n_components=2)
-        reduced_semantics = pca.fit_transform(semantic_vectors)
-
-        plot_semantic_space(reduced_semantics,
+        plot_semantic_space(semantic_vectors,
                             fitness_values)
 
         plot_semantic_heatmap(self.population)

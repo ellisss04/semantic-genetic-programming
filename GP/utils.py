@@ -1,6 +1,7 @@
 import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
+from sklearn.decomposition import PCA
 
 
 def get_tree_depth(root):
@@ -21,7 +22,9 @@ def get_tree_depth(root):
     return max_depth
 
 
-def plot_semantic_space(reduced_semantics, fitness_values):
+def plot_semantic_space(semantic_vectors, fitness_values):
+    pca = PCA(n_components=2)
+    reduced_semantics = pca.fit_transform(semantic_vectors)
     plt.scatter(reduced_semantics[:, 0], reduced_semantics[:, 1], c=fitness_values, cmap='viridis')
     plt.colorbar(label='Fitness')
     plt.xlabel('PCA Dimension 1')
@@ -103,8 +106,6 @@ def plot_semantic_heatmap(population):
     plt.show()
 
 
-import numpy as np
-
 def get_pairwise_distance(population):
     """
     Compute pairwise semantic distances for a population using normalized Manhattan distance.
@@ -113,12 +114,11 @@ def get_pairwise_distance(population):
         population (list): A list of individuals, each with a semantic_vector attribute.
 
     Returns:
-        np.ndarray: A pairwise distance matrix of shape (n, n).
+        np.ndarray: A distance matrix of shape (n, n).
     """
     # Extract semantic vectors from the population
     semantics = np.array([np.ravel(ind.semantic_vector) for ind in population])  # Shape (n, m)
 
-    # Initialize a pairwise distance matrix
     n = len(population)
     pairwise_matrix = np.zeros((n, n))
 
@@ -128,7 +128,7 @@ def get_pairwise_distance(population):
             # Normalized Manhattan distance
             distance = np.sum(np.abs(semantics[i] - semantics[j])) / len(semantics[i])
             pairwise_matrix[i, j] = distance
-            pairwise_matrix[j, i] = distance  # Symmetric assignment
+            pairwise_matrix[j, i] = distance
 
     return pairwise_matrix
 
