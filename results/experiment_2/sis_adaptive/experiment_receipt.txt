@@ -11,8 +11,41 @@ output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\
 population_size: 200
 project_name: SGP_project
 seed: 42
-use_semantics: False
-adaptive_threshold: False
+use_semantics: True
+adaptive_threshold: True
 semantic_threshold: 0.1
 tournament_size: 7
 verbose: True
+
+RUN 1
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.11340037159326517
+Final Mean Fitness: -0.13242196322419394
+Best Individual Tree: (multiply (sin x) (sin (sin (divide (cos 1) (multiply (divide 1 x) (sin 1))))))
+Best Individual Fitness: -0.054579205187202585
+Ratio of Unique Individuals : Population: 0.601010101010101
+Time to Complete: 233.30311822891235s
+
+
+RUN 2
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.09062241447833212
+Final Mean Fitness: -0.12585925723439118
+Best Individual Tree: (multiply (cos x) (multiply x x))
+Best Individual Fitness: -0.03284956909226093
+Ratio of Unique Individuals : Population: 0.4595959595959596
+Time to Complete: 211.41286063194275s
+
+
+RUN 3
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.09268510674846578
+Final Mean Fitness: -0.09289069576017868
+Best Individual Tree: (multiply (cos x) (multiply (multiply 1 x) (sin x)))
+Best Individual Fitness: -0.008813507978142556
+Ratio of Unique Individuals : Population: 0.6363636363636364
+Time to Complete: 223.5491075515747s
+

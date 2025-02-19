@@ -178,13 +178,13 @@ class GeneticProgram:
         Returns:
             Individual: The selected individual.
         """
-        population_copy = copy.deepcopy(self.population)
+        population_copy = list(self.population)
         tournament = random.sample(population_copy, self.tournament_size)
         return max(tournament, key=lambda ind: ind.fitness)
 
     def semantic_selection(self, parent_1: Individual) -> Individual:
         parent_semantics = parent_1.semantic_vector
-        temp_population = self.population.copy()
+        temp_population = list(self.population)
 
         best_candidate = random.choice(temp_population)
         temp_population.remove(best_candidate)
@@ -202,6 +202,24 @@ class GeneticProgram:
                     best_candidate = competitor
 
         return best_candidate
+
+    # def semantic_selection(self, parent_1: Individual) -> Individual:
+    #     parent_semantics = parent_1.semantic_vector
+    #     # Filter semantically diverse individuals
+    #     diverse_candidates = [
+    #         ind for ind in self.population if self.check_semantic_difference(parent_semantics, ind.semantic_vector)
+    #     ]
+    #
+    #     if diverse_candidates:
+    #         # Perform tournament selection among semantically diverse individuals
+    #         competitors = random.sample(diverse_candidates, min(self.tournament_size, len(diverse_candidates)))
+    #         best_candidate = max(competitors, key=lambda ind: ind.fitness)
+    #     else:
+    #         # Fallback: Use standard tournament selection
+    #         competitors = random.sample(self.population, self.tournament_size)
+    #         best_candidate = max(competitors, key=lambda ind: ind.fitness)
+    #
+    #     return best_candidate
 
     def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
         """
@@ -362,8 +380,8 @@ class GeneticProgram:
 
     def steady_state_population(self):
 
-        # self.current_threshold = self.sigmoid_decay()
-        self.current_threshold = self.linear_decay()
+        self.current_threshold = self.sigmoid_decay()
+        # self.current_threshold = self.linear_decay()
 
         total_node_count = 0
         new_individuals = []
@@ -408,23 +426,22 @@ class GeneticProgram:
             median_fitness = metrics['median_fitness']
             mean_fitness = metrics['avg_fitness']
 
-            tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
-                                      f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
-
             # self.semantic_diversity_values.append(set_semantic_diversity(self.population))
             # self.fitness_diversity_values.append(set_fitness_diversity(self.population))
 
-            if self.generation == self.max_generations/2 and self.generation == 0:
+            if self.generation == self.max_generations/2 or self.generation == 1:
                 fitness_values = self.get_pop_fitness_values()
                 semantic_vectors = self.get_pop_semantic_vectors()
 
-                plot_semantic_space(semantic_vectors, fitness_values)
+                # plot_semantic_space(semantic_vectors, fitness_values)
+            tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
+                                      f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
 
             self.steady_state_population()
 
         self.end_time = time.time()
 
-        self.post_processing()
+        # self.post_processing()
         self.write_receipt()
 
     def get_fitness_metrics(self):
@@ -487,11 +504,11 @@ class GeneticProgram:
                      y_axis="Mean fitness value",
                      y_scale="log")
 
-        plot_semantic_diversity(self.max_generations,
-                                self.semantic_diversity_values)
-
-        plot_fitness_diversity(self.max_generations,
-                               self.fitness_diversity_values)
+        # plot_semantic_diversity(self.max_generations,
+        #                         self.semantic_diversity_values)
+        #
+        # plot_fitness_diversity(self.max_generations,
+        #                        self.fitness_diversity_values)
 
     def write_receipt(self):
         # Ensure the output directory exists
