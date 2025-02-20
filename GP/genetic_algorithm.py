@@ -288,6 +288,9 @@ class GeneticProgram:
         subtree1 = random.choice(nodes1)
         subtree2 = random.choice(nodes2)
 
+        subtree2.assign_new_uuids(subtree2)
+        # avoids circluar dependencies
+
         offspring = parent1.replace_subtree(subtree1, subtree2)
 
         return offspring
@@ -416,6 +419,7 @@ class GeneticProgram:
         """
         tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
         self.start_time = time.time()
+        best_fitness = None
         for generation in tqdm_loop:
             self.generation = generation
             self.set_fitness_if_none()
@@ -423,7 +427,6 @@ class GeneticProgram:
             metrics = self.get_fitness_metrics()
 
             best_fitness = metrics['best_fitness']
-            median_fitness = metrics['median_fitness']
             mean_fitness = metrics['avg_fitness']
 
             # self.semantic_diversity_values.append(set_semantic_diversity(self.population))
@@ -435,7 +438,7 @@ class GeneticProgram:
 
                 # plot_semantic_space(semantic_vectors, fitness_values)
             tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
-                                      f"Median Fitness = {median_fitness}, Mean fitness {mean_fitness}.")
+                                      f"Mean fitness {mean_fitness}.")
 
             self.steady_state_population()
 
@@ -443,6 +446,10 @@ class GeneticProgram:
 
         # self.post_processing()
         self.write_receipt()
+
+        if best_fitness > -0.01:
+            return 1
+        return 0
 
     def get_fitness_metrics(self):
         # Filter out individuals with None fitness values

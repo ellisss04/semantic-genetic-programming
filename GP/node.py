@@ -112,6 +112,7 @@ class Node:
         for i, child in enumerate(self.children):
             if child.id == target.id:
                 self.update_attributes(replacement, i)
+
                 return self
             else:
                 self.children[i] = child.replace_subtree(target, replacement)
@@ -130,6 +131,11 @@ class Node:
             self.right = replacement
         else:
             raise IndexError
+
+    def assign_new_uuids(self, node):
+        node.id = uuid.uuid4()  # Assign a new UUID
+        for child in node.children:
+            self. assign_new_uuids(child)
 
     def prune(self, terminals, current_depth=1):
         """

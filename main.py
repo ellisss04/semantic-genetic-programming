@@ -12,7 +12,7 @@ from config import Config
 
 
 def target_function(x):
-    return x ** 3 + x ** 2 + x
+    return x ** 4 + x ** 3 + x ** 2 + x
     # return sin(x**2) * cos(x)
 
 
@@ -112,6 +112,7 @@ if __name__ == "__main__":
     write_config_details(output_dir, config, verbose)
 
     print("=" * 30)
+    hits = 0
     for run in range(number_of_runs):
         print(f"Run {run + 1}")
         gp = GeneticProgram(
@@ -134,4 +135,6 @@ if __name__ == "__main__":
             tournament_size=tournament_size,
         )
 
-        gp.evolve()
+        hits += gp.evolve()
+
+    print(f'number of hits {hits}')

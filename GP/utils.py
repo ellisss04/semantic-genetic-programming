@@ -132,3 +132,31 @@ def get_pairwise_distance(population):
 
     return pairwise_matrix
 
+
+def check_circular_references(node, visited=None, path=None):
+    """
+    Check for circular references in a tree structure and return the path.
+
+    Args:
+        node: The current node in the tree.
+        visited: A set to keep track of visited node IDs.
+        path: A list to keep track of the traversal path.
+
+    Raises:
+        ValueError: If a circular reference is detected.
+    """
+    if visited is None:
+        visited = set()
+    if path is None:
+        path = []
+
+    if node.id in visited:
+        raise ValueError(f"Circular reference detected at node: {node}. Path: {' -> '.join(path + [str(node)])}")
+
+    visited.add(node.id)
+    path.append(str(node))
+
+    for child in node.children:
+        check_circular_references(child, visited, path)
+
+    path.pop()
