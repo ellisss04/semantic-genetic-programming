@@ -349,7 +349,7 @@ class GeneticProgram:
         mutated_tree = mutate_node(individual.tree, get_tree_depth(individual.tree))
         return Individual(mutated_tree)
 
-    def elitism(self):
+    def elitism(self) -> List[Individual]:
         # Sort the population by fitness in descending order
         sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=True)
         # Return the top x candidates
@@ -395,6 +395,8 @@ class GeneticProgram:
         total_node_count = 0
         new_individuals = []
 
+        elites = self.elitism()
+
         for _ in range(2):
             parent1, parent2 = self.select_parents()
 
@@ -410,6 +412,7 @@ class GeneticProgram:
             new_individuals.append(child)
 
         self.evaluated_nodes.append(total_node_count)
+        self.population += elites
 
         sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=False)
         worst = sorted_population[:2]
@@ -418,6 +421,8 @@ class GeneticProgram:
                 self.population.remove(ind)
         self.population.append(new_individuals[0])
         self.population.append(new_individuals[1])
+
+        random.shuffle(self.population)
 
     def evolve(self):
         """

@@ -1,6 +1,6 @@
 output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\dump
 seed: 42
-use_semantics: true
+use_semantics: false
 adaptive_threshold: true
 elitism_size: 0
 independent_runs: 30
