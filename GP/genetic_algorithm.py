@@ -77,7 +77,6 @@ class GeneticProgram:
         self.hit_threshold = 0.05
 
         # Class arrays
-        self.hits = []
         self.evaluated_nodes = []
         self.best_fitness_values = []
         self.avg_fitness_values = []
@@ -140,21 +139,30 @@ class GeneticProgram:
     def ramped_half_and_half(self):
         """
         Generate a population using ramped half-and-half initialization.
+        Ensures the population size matches self.population_size exactly.
         """
         population = []
         depths = list(range(self.initial_depth, self.final_depth + 1))
+        num_depths = len(depths)
+        individuals_per_group = self.population_size // (2 * num_depths)
+        total_individuals = 2 * individuals_per_group * num_depths
 
         # Divide population into full and grow methods
         for depth in depths:
-            chosen_depth = depth
-            for _ in range(self.population_size // (2 * len(depths))):
+            for _ in range(individuals_per_group):
                 # Full method
-                population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="full")))
+                population.append(Individual(self.generate_random_tree(depth, depth, method="full")))
                 # Grow method
-                population.append(Individual(self.generate_random_tree(depth, chosen_depth, method="grow")))
+                population.append(Individual(self.generate_random_tree(depth, depth, method="grow")))
+
+        # Add remaining individuals to match self.population_size
+        remaining = self.population_size - len(population)
+        for _ in range(remaining):
+            method = random.choice(["full", "grow"])
+            depth = random.choice(depths)
+            population.append(Individual(self.generate_random_tree(depth, depth, method=method)))
 
         random.shuffle(population)
-
         return population
 
     def select_parents(self):
@@ -183,20 +191,16 @@ class GeneticProgram:
         return max(tournament, key=lambda ind: ind.fitness)
 
     def semantic_selection(self, parent_1: Individual) -> Individual:
-        parent_semantics = parent_1.semantic_vector
-        temp_population = list(self.population)
 
-        best_candidate = random.choice(temp_population)
-        temp_population.remove(best_candidate)
-
+        best_candidate = random.choice(self.population)
         best_fitness = best_candidate.fitness
 
         for _ in range(self.tournament_size):
-            competitor = random.choice(temp_population)
-            temp_population.remove(competitor)
-            competitor_semantics = competitor.semantic_vector
+            competitor = random.choice(self.population)
             # if semantically different
-            if self.check_semantic_difference(parent_semantics, competitor_semantics):
+            if parent_1.semantic_vector == competitor.semantic_vector:
+                break
+            if self.check_semantic_difference(parent_1.semantic_vector, competitor.semantic_vector):
                 if competitor.fitness > best_fitness:
                     best_fitness = competitor.fitness
                     best_candidate = competitor
@@ -288,8 +292,8 @@ class GeneticProgram:
         subtree1 = random.choice(nodes1)
         subtree2 = random.choice(nodes2)
 
+        # avoids circular dependencies
         subtree2.assign_new_uuids(subtree2)
-        # avoids circluar dependencies
 
         offspring = parent1.replace_subtree(subtree1, subtree2)
 
@@ -346,7 +350,7 @@ class GeneticProgram:
         return Individual(mutated_tree)
 
     def elitism(self):
-        # Sort the population by fit`ness in descending order
+        # Sort the population by fitness in descending order
         sorted_population = sorted(self.population, key=lambda candidate: candidate.fitness, reverse=True)
         # Return the top x candidates
         elites = sorted_population[:self.elitism_size]
@@ -355,30 +359,32 @@ class GeneticProgram:
                 self.population.remove(ind)
         return elites
 
-    def fitness_function(self, ind: Individual):
+    def fitness_function_rmse(self, ind: Individual):
         total_error = 0
         total_node_count = 0
+
+        # Reset the semantic vector before evaluation
 
         for x_value, y_value in self.dataset:
             variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
             y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
-            ind.set_semantics(y_pred)
+            ind.set_semantics(y_pred)  # Store the prediction in the semantic vector
             error = (y_pred - y_value) ** 2
             total_error += error
             total_node_count += node_count
 
-            if abs(y_pred - y_value) < self.hit_threshold:
-                ind.hits += 1
-
         mse = total_error / len(self.dataset)  # Calculate the mean squared error
         rmse = sqrt(mse)
+
+        if len(ind.semantic_vector) != 21:
+            raise ValueError
 
         return -rmse, total_node_count
 
     def set_fitness_if_none(self):
         for individual in self.population:
             if individual.fitness is None:  # Only evaluate if fitness has not been assigned
-                fitness, node_count = self.fitness_function(individual)
+                fitness, node_count = self.fitness_function_rmse(individual)
                 individual.set_fitness(fitness)
 
     def steady_state_population(self):
@@ -397,7 +403,7 @@ class GeneticProgram:
             child = self.mutate(child)
 
             # Evaluate fitness and update node count
-            fitness, node_count = self.fitness_function(child)
+            fitness, node_count = self.fitness_function_rmse(child)
             child.set_fitness(fitness)
             total_node_count += node_count
 
@@ -437,8 +443,8 @@ class GeneticProgram:
                 semantic_vectors = self.get_pop_semantic_vectors()
 
                 # plot_semantic_space(semantic_vectors, fitness_values)
-            tqdm_loop.set_description(f"Evolving - Best Fitness = {best_fitness} - "
-                                      f"Mean fitness {mean_fitness}.")
+            tqdm_loop.set_description(f"Evolving Run {self.run_number + 1} - Best Fitness = {best_fitness} - "
+                                      f"Mean Fitness {mean_fitness}.")
 
             self.steady_state_population()
 
@@ -447,7 +453,7 @@ class GeneticProgram:
         # self.post_processing()
         self.write_receipt()
 
-        if best_fitness > -0.01:
+        if abs(best_fitness) < self.hit_threshold:
             return 1
         return 0
 

@@ -2,7 +2,6 @@ import math
 import random
 
 import numpy as np
-import yaml
 
 from GP.genetic_algorithm import GeneticProgram
 
@@ -12,8 +11,8 @@ from config import Config
 
 
 def target_function(x):
-    return x ** 4 + x ** 3 + x ** 2 + x
-    # return sin(x**2) * cos(x)
+    return x ** 3 + x ** 2 + x
+    # return log(x+1) + log(x**2 + 1)
 
 
 def generate_dataset():
@@ -35,7 +34,8 @@ def subtract(x, y): return x - y
 def multiply(x, y): return x * y
 
 
-def divide(x, y): return x / y if y != 0 else 1  # Handle division by zero
+def divide(x, y):
+    return x / y if y != 0 else 1e-6  # Use a small constant for safety
 
 
 def sin(x):
@@ -56,7 +56,11 @@ def exp(x):
 
 
 def log(x):
-    return math.log(x) if x > 0 else 1  # Handle log(0) or negative inputs gracefully
+    return math.log(x) if x > 0 else 0
+
+
+def sqrt(x):
+    return math.sqrt(x) if x >= 0 else 0
 
 
 def write_config_details(output_dir, config, verbose):
@@ -106,7 +110,7 @@ if __name__ == "__main__":
 
     random.seed(seed)
 
-    functions = [add, subtract, multiply, divide, sin, cos]
+    functions = [add, subtract, multiply, divide, exp, log]
     terminals = ['x', 1]
 
     write_config_details(output_dir, config, verbose)
@@ -114,7 +118,6 @@ if __name__ == "__main__":
     print("=" * 30)
     hits = 0
     for run in range(number_of_runs):
-        print(f"Run {run + 1}")
         gp = GeneticProgram(
             config=config_path,
             run_number=run,

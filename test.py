@@ -47,7 +47,7 @@ class TestGeneticProgram(unittest.TestCase):
         """Test the fitness function with a known output."""
         tree = Node(add, [Node(1), Node(1)])
         individual = Individual(tree)
-        fitness = self.gp.fitness_function(individual)
+        fitness = self.gp.fitness_function_rmse(individual)
         self.assertIsInstance(fitness, float)  # Fitness should be a float
 
     def test_crossover(self):

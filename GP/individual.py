@@ -8,7 +8,6 @@ class Individual:
         self.tree = tree
         self.fitness = None  # Fitness will be assigned later
         self.semantic_vector = []
-        self.hits = 0
 
     def set_fitness(self, fitness: float):
         self.fitness = fitness
@@ -16,7 +15,17 @@ class Individual:
     def get_depth(self):
         return self.tree.get_depth()
 
-    def set_semantics(self, output):
+    def reset_semantics(self):
+        """ Clears the semantic vector to prepare for a new evaluation."""
+        self.semantic_vector = []
+
+    def set_semantics(self, output: float):
+        """
+        Appends a new output value to the semantic vector.
+
+        Args:
+            output (float): The predicted output value to store.
+        """
         self.semantic_vector.append(output)
 
     def evaluate(self, variables: dict) -> Any:
