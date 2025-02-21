@@ -38,6 +38,7 @@ class GeneticProgram:
                  crossover_rate: int,
                  initial_depth: int,
                  final_depth: int,
+                 max_final_depth: int,
                  functions: List[Callable],
                  terminals: List[Any],
                  dataset: List[tuple]):
@@ -63,6 +64,7 @@ class GeneticProgram:
         self.crossover_rate = crossover_rate
         self.initial_depth = initial_depth
         self.final_depth = final_depth
+        self.max_final_depth = max_final_depth
         self.functions = functions
         self.terminals = terminals
         self.dataset = dataset
@@ -330,10 +332,10 @@ class GeneticProgram:
                     # Filter functions by matching arity
                     compatible_functions = [func for func in self.functions if self.function_arity_map[func] == arity]
                     new_func = random.choice(compatible_functions)
-                    new_children = [mutate_node(child, get_tree_depth(child) - 1) for child in node.children]
+                    new_children = [mutate_node(child, child.get_depth() - 1) for child in node.children]
                     mutated_node = Node(new_func, new_children)
                     mutated_node.update_children()
-                    return Node(new_func, [mutate_node(child, get_tree_depth(child) - 1)
+                    return Node(new_func, [mutate_node(child, child.get_depth() - 1)
                                            for child in node.children])
                 else:  # Replace operand
                     new_terminal = random.choice(self.terminals)
@@ -342,11 +344,11 @@ class GeneticProgram:
                     return Node(new_terminal)
 
             if callable(node.value):  # Recurse on children
-                node.children = [mutate_node(child, get_tree_depth(child) - 1) for child in node.children]
+                node.children = [mutate_node(child, child.get_depth() - 1) for child in node.children]
                 node.update_children()
             return node
 
-        mutated_tree = mutate_node(individual.tree, get_tree_depth(individual.tree))
+        mutated_tree = mutate_node(individual.tree, individual.get_depth())
         return Individual(mutated_tree)
 
     def elitism(self) -> List[Individual]:
@@ -387,22 +389,22 @@ class GeneticProgram:
                 fitness, node_count = self.fitness_function_rmse(individual)
                 individual.set_fitness(fitness)
 
-    def steady_state_population(self):
-
-        self.current_threshold = self.sigmoid_decay()
-        # self.current_threshold = self.linear_decay()
-
+    def genetic_operations(self):
         total_node_count = 0
         new_individuals = []
-
-        elites = self.elitism()
 
         for _ in range(2):
             parent1, parent2 = self.select_parents()
 
             child = self.apply_crossover(parent1, parent2)
 
+            if child.get_depth() > self.max_final_depth:
+                child.tree.prune(self.terminals, self.max_final_depth)
+
             child = self.mutate(child)
+
+            if child.get_depth() > self.max_final_depth:
+                raise ValueError
 
             # Evaluate fitness and update node count
             fitness, node_count = self.fitness_function_rmse(child)
@@ -410,6 +412,20 @@ class GeneticProgram:
             total_node_count += node_count
 
             new_individuals.append(child)
+
+            if child.get_depth() > self.max_final_depth:
+                print(child.get_depth())
+                print(f'Depth over for child {child}')
+        return new_individuals, total_node_count
+
+    def steady_state_population(self):
+
+        self.current_threshold = self.sigmoid_decay()
+        # self.current_threshold = self.linear_decay()
+
+        elites = self.elitism()
+
+        new_individuals, total_node_count = self.genetic_operations()
 
         self.evaluated_nodes.append(total_node_count)
         self.population += elites

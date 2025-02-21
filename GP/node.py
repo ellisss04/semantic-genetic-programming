@@ -15,7 +15,6 @@ class Node:
         self.id = uuid.uuid4()
         self.value = value
         self.children = children if children is not None else []
-        self.max_depth = 9
 
         # Set left and right only if children exist
         self.left = self.children[0] if len(self.children) > 0 else None
@@ -137,22 +136,30 @@ class Node:
         for child in node.children:
             self. assign_new_uuids(child)
 
-    def prune(self, terminals, current_depth=1):
+    def prune(self, terminals, max_depth, current_depth=1):
         """
         Prune the tree to ensure it does not exceed the specified maximum depth.
 
         Args:
             terminals: the list of terminal nodes
+            max_depth: the maximum depth a tree can be
             current_depth (int): The current depth during traversal.
         """
-        if current_depth == self.max_depth:
+        if current_depth == max_depth - 1:
             # Remove all children to make this node a leaf
-            self.left = random.choice(terminals)
-            self.right = random.choice(terminals)
-            self.children = [self.left, self.right]
+            if callable(self.value):
+                if self.value.__code__.co_argcount == 2:  # Determine number of children (arity)
+                    self.left = Node(random.choice(terminals), [])
+                    self.right = Node(random.choice(terminals), [])
+                    self.children = [self.left, self.right]
+                else:
+                    self.left = Node(random.choice(terminals), [])
+                    self.children = [self.left]
+            else:
+                pass
         else:
             for child in self.children:
-                child.prune(current_depth + 1)
+                child.prune(terminals, max_depth, current_depth + 1)
 
     def __str__(self):
         if callable(self.value):

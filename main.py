@@ -94,6 +94,7 @@ if __name__ == "__main__":
     max_generations = config.get("max_generations", 200)
     initial_depth = config.get("initial_depth", 5)
     final_depth = config.get("final_depth", 7)
+    max_final_depth = config.get("max_final_depth", 9)
     crossover_rate = config.get("crossover_rate", 1.0)
     mutation_rate = config.get("mutation_rate", 0.1)
     elitism_size = config.get("elitism_size", 1)
@@ -132,6 +133,7 @@ if __name__ == "__main__":
             mutation_rate=mutation_rate,
             initial_depth=initial_depth,
             final_depth=final_depth,
+            max_final_depth=max_final_depth,
             functions=functions,
             terminals=terminals,
             dataset=generate_dataset(),
