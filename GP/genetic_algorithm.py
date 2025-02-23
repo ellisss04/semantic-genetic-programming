@@ -4,6 +4,8 @@ import random
 import copy
 import time
 
+import matplotlib.pyplot as plt
+import pandas as pd
 from tqdm import tqdm
 from math import sqrt
 from typing import List, Callable, Any
@@ -30,7 +32,8 @@ class GeneticProgram:
                  max_generations: int,
                  use_semantics: bool,
                  adaptive_threshold: bool,
-                 semantic_threshold: float,
+                 max_semantic_threshold: float,
+                 min_semantic_threshold: float,
                  population_size: int,
                  tournament_size: int,
                  elitism_size: int,
@@ -56,7 +59,8 @@ class GeneticProgram:
         self.max_generations = max_generations
         self.use_semantics = use_semantics
         self.adaptive_threshold = adaptive_threshold
-        self.max_semantic_threshold = semantic_threshold
+        self.max_semantic_threshold = max_semantic_threshold
+        self.min_semantic_threshold = min_semantic_threshold
         self.population_size = population_size
         self.tournament_size = tournament_size
         self.elitism_size = elitism_size
@@ -74,14 +78,13 @@ class GeneticProgram:
         self.generation = None
         self.function_arity_map = {}
         self.population = self.ramped_half_and_half()
-        self.min_semantic_threshold = 0.01
         self.current_threshold = None
         self.hit_threshold = 0.05
 
         # Class arrays
         self.evaluated_nodes = []
         self.best_fitness_values = []
-        self.avg_fitness_values = []
+        self.mean_fitness_values = []
         self.min_fitness_values = []
         self.max_fitness_values = []
         self.median_fitness_values = []
@@ -236,7 +239,7 @@ class GeneticProgram:
         If the configuration uses the adaptive threshold method, then it will use the decayed threshold
         """
         if not self.adaptive_threshold:
-            return all(abs(val1 - val2) >= self.min_semantic_threshold
+            return all(abs(val1 - val2) >= self.max_semantic_threshold
                        for val1, val2 in zip(semantics_1, semantics_2))
         else:
             return all(abs(val1 - val2) >= self.current_threshold
@@ -403,9 +406,6 @@ class GeneticProgram:
 
             child = self.mutate(child)
 
-            if child.get_depth() > self.max_final_depth:
-                raise ValueError
-
             # Evaluate fitness and update node count
             fitness, node_count = self.fitness_function_rmse(child)
             child.set_fitness(fitness)
@@ -413,9 +413,6 @@ class GeneticProgram:
 
             new_individuals.append(child)
 
-            if child.get_depth() > self.max_final_depth:
-                print(child.get_depth())
-                print(f'Depth over for child {child}')
         return new_individuals, total_node_count
 
     def steady_state_population(self):
@@ -447,6 +444,7 @@ class GeneticProgram:
         tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
         self.start_time = time.time()
         best_fitness = None
+        diversity_log = []
         for generation in tqdm_loop:
             self.generation = generation
             self.set_fitness_if_none()
@@ -454,16 +452,20 @@ class GeneticProgram:
             metrics = self.get_fitness_metrics()
 
             best_fitness = metrics['best_fitness']
-            mean_fitness = metrics['avg_fitness']
+            mean_fitness = metrics['mean_fitness']
 
-            # self.semantic_diversity_values.append(set_semantic_diversity(self.population))
-            # self.fitness_diversity_values.append(set_fitness_diversity(self.population))
+            semantic_diversity = set_semantic_diversity(self.population)
+            fitness_diversity = set_fitness_diversity(self.population)
 
-            if self.generation == self.max_generations/2 or self.generation == 1:
-                fitness_values = self.get_pop_fitness_values()
-                semantic_vectors = self.get_pop_semantic_vectors()
+            diversity_log.append({
+                "generation": generation,
+                "semantic_diversity": semantic_diversity,
+                "fitness_diversity": fitness_diversity,
+                "best_fitness": best_fitness,
+                "mean_fitness": mean_fitness
+            })
 
-                # plot_semantic_space(semantic_vectors, fitness_values)
+            # plot_semantic_space(semantic_vectors, fitness_values)
             tqdm_loop.set_description(f"Evolving Run {self.run_number + 1} - Best Fitness = {best_fitness} - "
                                       f"Mean Fitness {mean_fitness}.")
 
@@ -472,6 +474,7 @@ class GeneticProgram:
         self.end_time = time.time()
 
         # self.post_processing()
+        self.diversity_tracking(diversity_log)
         self.write_receipt()
 
         if abs(best_fitness) < self.hit_threshold:
@@ -485,12 +488,10 @@ class GeneticProgram:
         if not fitness_values:  # Check if there are valid fitness values
             return None, None
 
-        # Calculate total, best, and average fitness
-        total_fitness = sum(fitness_values)
         best_individual = max(self.population, key=lambda ind: ind.fitness, default=None)
-        avg_fitness = total_fitness / len(fitness_values)
 
         # Calculate additional metrics
+        mean_fitness = np.mean(fitness_values)
         median_fitness = np.median(fitness_values)
         min_fitness = np.min(fitness_values)
         max_fitness = np.max(fitness_values)
@@ -498,7 +499,7 @@ class GeneticProgram:
         # Store fitness values for this generation (for plotting)
         if best_individual is not None:
             self.best_fitness_values.append(best_individual.fitness)
-        self.avg_fitness_values.append(avg_fitness)
+        self.mean_fitness_values.append(mean_fitness)
         self.median_fitness_values.append(median_fitness)
         self.min_fitness_values.append(min_fitness)
         self.max_fitness_values.append(max_fitness)
@@ -506,7 +507,7 @@ class GeneticProgram:
         # Return a dictionary of fitness metrics
         metrics = {
             'best_fitness': best_individual.fitness if best_individual else None,
-            'avg_fitness': avg_fitness,
+            'mean_fitness': mean_fitness,
             'median_fitness': median_fitness,
             'min_fitness': min_fitness,
             'max_fitness': max_fitness,
@@ -514,18 +515,38 @@ class GeneticProgram:
 
         return metrics
 
+    def diversity_tracking(self, diversity_log):
+        df = pd.DataFrame(diversity_log)
+
+        # Compute correlation matrix
+        corr = df.corr()
+        print(corr)
+
+        plt.plot(df["generation"], df["semantic_diversity"], label="Semantic Diversity")
+        plt.plot(df["generation"], df["fitness_diversity"], label="Fitness Diversity")
+        plt.xlabel("Generation")
+        plt.ylabel("Diversity")
+        plt.legend()
+        plt.show()
+
+        plt.scatter(df["semantic_diversity"], df["mean_fitness"], label="Semantic Diversity vs Fitness")
+        plt.xlabel("Semantic Diversity")
+        plt.ylabel("Best Fitness")
+        plt.legend()
+        plt.show()
+
     def post_processing(self):
         semantic_vectors = self.get_pop_semantic_vectors()
         fitness_values = self.get_pop_fitness_values()
         avg_fitness_values_abs = []
 
-        for fitness in self.avg_fitness_values:
+        for fitness in self.mean_fitness_values:
             avg_fitness_values_abs.append(abs(fitness))
 
         plot_semantic_space(semantic_vectors,
                             fitness_values)
 
-        plot_semantic_heatmap(self.population)
+        # plot_semantic_heatmap(self.population)
 
         plot_fitness(self.max_generations,
                      self.median_fitness_values,
@@ -550,7 +571,7 @@ class GeneticProgram:
 
         metrics = self.get_fitness_metrics()
         final_median_fitness = metrics['median_fitness']
-        final_mean_fitness = metrics['avg_fitness']
+        final_mean_fitness = metrics['mean_fitness']
         best_individual = self.get_best_individual()
         unique_individuals = track_unique_individuals(self.population)
 

@@ -12,7 +12,7 @@ from config import Config
 
 def target_function(x):
     return x ** 3 + x ** 2 + x
-    # return log(x+1) + log(x**2 + 1)
+    # return log(x+1) + sin(x)
 
 
 def generate_dataset():
@@ -35,7 +35,9 @@ def multiply(x, y): return x * y
 
 
 def divide(x, y):
-    return x / y if y != 0 else 1e-6  # Use a small constant for safety
+    if abs(y) < 0.1:  # Avoid very small denominators
+        return x  # Treat as no-op
+    return x / y
 
 
 def sin(x):
@@ -104,14 +106,15 @@ if __name__ == "__main__":
     seed = config.get("seed", 42)
     use_semantics = config.get("use_semantics", True)
     adaptive_threshold = config.get("adaptive_threshold", True)
-    semantic_threshold = config.get("semantic_threshold", 0.01)
+    max_semantic_threshold = config.get("max_semantic_threshold", 0.05)
+    min_semantic_threshold = config.get("min_semantic_threshold", 0.01)
     tournament_size = config.get("tournament_size", 7)
     verbose = config.get("verbose", True)
     number_of_runs = config.get("independent_runs", 30)
 
     random.seed(seed)
 
-    functions = [add, subtract, multiply, divide, exp, log]
+    functions = [add, subtract, multiply, sin, cos, log]
     terminals = ['x', 1]
 
     write_config_details(output_dir, config, verbose)
@@ -126,7 +129,8 @@ if __name__ == "__main__":
             max_generations=max_generations,
             use_semantics=use_semantics,
             adaptive_threshold=adaptive_threshold,
-            semantic_threshold=semantic_threshold,
+            max_semantic_threshold=max_semantic_threshold,
+            min_semantic_threshold = min_semantic_threshold,
             population_size=population_size,
             elitism_size=elitism_size,
             crossover_rate=crossover_rate,
