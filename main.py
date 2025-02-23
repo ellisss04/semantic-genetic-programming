@@ -11,8 +11,8 @@ from config import Config
 
 
 def target_function(x):
-    return x ** 3 + x ** 2 + x
-    # return log(x+1) + sin(x)
+    # return x ** 3 + x ** 2 + x
+    return log(x+1) + sin(x)
 
 
 def generate_dataset():
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             use_semantics=use_semantics,
             adaptive_threshold=adaptive_threshold,
             max_semantic_threshold=max_semantic_threshold,
-            min_semantic_threshold = min_semantic_threshold,
+            min_semantic_threshold=min_semantic_threshold,
             population_size=population_size,
             elitism_size=elitism_size,
             crossover_rate=crossover_rate,

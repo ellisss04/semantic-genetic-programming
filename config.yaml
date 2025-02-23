@@ -13,6 +13,6 @@ crossover_rate: 0.9
 mutation_rate: 0.25
 population_size: 200
 max_semantic_threshold: 0.01
-min_semantic_threshold: 0.001
+min_semantic_threshold: 0.01
 shuffle: true
 verbose: true

@@ -69,18 +69,6 @@ def plot_evaluated_nodes(evaluated_nodes):
     plt.show()
 
 
-def plot_semantic_diversity(generations, semantic_diversity):
-    plt.figure(figsize=(10, 6))
-    generations = list(range(generations))
-    plt.plot(generations, semantic_diversity, label="Semantic Diversity", color="green")
-    plt.xlabel("Generation")
-    plt.ylabel("Semantic diversity (logged)")
-    plt.title("Semantic diversity progression over generations")
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-
 def plot_fitness_diversity(generations, fitness_diversity):
     plt.figure(figsize=(10, 6))
     generations = list(range(generations))
@@ -103,6 +91,19 @@ def plot_semantic_heatmap(population):
     plt.title("Semantic Diversity Heatmap (Final Generation)")
     plt.xlabel("Individual Index")
     plt.ylabel("Individual Index")
+    plt.show()
+
+
+def plot_semantic_diversity(max_generations, semantic_diversity_values):
+    generations = list(range(max_generations))
+    plt.figure(figsize=(10, 6))
+    plt.plot(generations, semantic_diversity_values, label="semantic div", color="blue")
+    plt.xlabel("Generation")
+    plt.ylabel("semantic diversity")
+    plt.ylim(0, 1.0)
+    plt.title("semantic diversity against generations")
+    plt.legend()
+    plt.grid()
     plt.show()
 
 

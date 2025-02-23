@@ -90,6 +90,7 @@ class GeneticProgram:
         self.median_fitness_values = []
         self.semantic_diversity_values = []
         self.fitness_diversity_values = []
+        self.diversity_log = []
 
         self.set_function_map()
 
@@ -196,39 +197,22 @@ class GeneticProgram:
         return max(tournament, key=lambda ind: ind.fitness)
 
     def semantic_selection(self, parent_1: Individual) -> Individual:
+        parent_semantics = parent_1.semantic_vector
+        # Filter semantically diverse individuals
+        diverse_candidates = [
+            ind for ind in self.population if self.check_semantic_difference(parent_semantics, ind.semantic_vector)
+        ]
 
-        best_candidate = random.choice(self.population)
-        best_fitness = best_candidate.fitness
-
-        for _ in range(self.tournament_size):
-            competitor = random.choice(self.population)
-            # if semantically different
-            if parent_1.semantic_vector == competitor.semantic_vector:
-                break
-            if self.check_semantic_difference(parent_1.semantic_vector, competitor.semantic_vector):
-                if competitor.fitness > best_fitness:
-                    best_fitness = competitor.fitness
-                    best_candidate = competitor
+        if diverse_candidates:
+            # Perform tournament selection among semantically diverse individuals
+            competitors = random.sample(diverse_candidates, min(self.tournament_size, len(diverse_candidates)))
+            best_candidate = max(competitors, key=lambda ind: ind.fitness)
+        else:
+            # Fallback: Use standard tournament selection
+            competitors = random.sample(self.population, self.tournament_size)
+            best_candidate = max(competitors, key=lambda ind: ind.fitness)
 
         return best_candidate
-
-    # def semantic_selection(self, parent_1: Individual) -> Individual:
-    #     parent_semantics = parent_1.semantic_vector
-    #     # Filter semantically diverse individuals
-    #     diverse_candidates = [
-    #         ind for ind in self.population if self.check_semantic_difference(parent_semantics, ind.semantic_vector)
-    #     ]
-    #
-    #     if diverse_candidates:
-    #         # Perform tournament selection among semantically diverse individuals
-    #         competitors = random.sample(diverse_candidates, min(self.tournament_size, len(diverse_candidates)))
-    #         best_candidate = max(competitors, key=lambda ind: ind.fitness)
-    #     else:
-    #         # Fallback: Use standard tournament selection
-    #         competitors = random.sample(self.population, self.tournament_size)
-    #         best_candidate = max(competitors, key=lambda ind: ind.fitness)
-    #
-    #     return best_candidate
 
     def check_semantic_difference(self, semantics_1, semantics_2) -> bool:
         """
@@ -374,15 +358,12 @@ class GeneticProgram:
             variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
             y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
             ind.set_semantics(y_pred)  # Store the prediction in the semantic vector
-            error = (y_pred - y_value) ** 2
+            error = abs(y_pred - y_value) ** 2
             total_error += error
             total_node_count += node_count
 
         mse = total_error / len(self.dataset)  # Calculate the mean squared error
         rmse = sqrt(mse)
-
-        if len(ind.semantic_vector) != 21:
-            raise ValueError
 
         return -rmse, total_node_count
 
@@ -417,7 +398,7 @@ class GeneticProgram:
 
     def steady_state_population(self):
 
-        self.current_threshold = self.sigmoid_decay()
+        # self.current_threshold = self.sigmoid_decay()
         # self.current_threshold = self.linear_decay()
 
         elites = self.elitism()
@@ -444,7 +425,6 @@ class GeneticProgram:
         tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
         self.start_time = time.time()
         best_fitness = None
-        diversity_log = []
         for generation in tqdm_loop:
             self.generation = generation
             self.set_fitness_if_none()
@@ -454,18 +434,12 @@ class GeneticProgram:
             best_fitness = metrics['best_fitness']
             mean_fitness = metrics['mean_fitness']
 
-            semantic_diversity = set_semantic_diversity(self.population)
-            fitness_diversity = set_fitness_diversity(self.population)
-
-            diversity_log.append({
-                "generation": generation,
-                "semantic_diversity": semantic_diversity,
-                "fitness_diversity": fitness_diversity,
-                "best_fitness": best_fitness,
-                "mean_fitness": mean_fitness
-            })
+            # self.track_diversity(best_fitness, mean_fitness)
 
             # plot_semantic_space(semantic_vectors, fitness_values)
+            # semantic_diversity = set_semantic_diversity(self.population)
+            # self.semantic_diversity_values.append(semantic_diversity)
+
             tqdm_loop.set_description(f"Evolving Run {self.run_number + 1} - Best Fitness = {best_fitness} - "
                                       f"Mean Fitness {mean_fitness}.")
 
@@ -474,7 +448,7 @@ class GeneticProgram:
         self.end_time = time.time()
 
         # self.post_processing()
-        self.diversity_tracking(diversity_log)
+        # self.diversity_plots()
         self.write_receipt()
 
         if abs(best_fitness) < self.hit_threshold:
@@ -515,8 +489,21 @@ class GeneticProgram:
 
         return metrics
 
-    def diversity_tracking(self, diversity_log):
-        df = pd.DataFrame(diversity_log)
+    def track_diversity(self, best_fitness, mean_fitness):
+
+        semantic_diversity = set_semantic_diversity(self.population)
+        fitness_diversity = set_fitness_diversity(self.population)
+
+        self.diversity_log.append({
+            "generation": self.generation,
+            "semantic_diversity": semantic_diversity,
+            "fitness_diversity": fitness_diversity,
+            "best_fitness": best_fitness,
+            "mean_fitness": mean_fitness
+        })
+
+    def diversity_plots(self):
+        df = pd.DataFrame(self.diversity_log)
 
         # Compute correlation matrix
         corr = df.corr()
@@ -531,7 +518,7 @@ class GeneticProgram:
 
         plt.scatter(df["semantic_diversity"], df["mean_fitness"], label="Semantic Diversity vs Fitness")
         plt.xlabel("Semantic Diversity")
-        plt.ylabel("Best Fitness")
+        plt.ylabel("Mean Fitness")
         plt.legend()
         plt.show()
 
@@ -546,8 +533,6 @@ class GeneticProgram:
         plot_semantic_space(semantic_vectors,
                             fitness_values)
 
-        # plot_semantic_heatmap(self.population)
-
         plot_fitness(self.max_generations,
                      self.median_fitness_values,
                      title="Median fitness across generations",
@@ -558,12 +543,6 @@ class GeneticProgram:
                      title="Mean average fitness across generations (logged)",
                      y_axis="Mean fitness value",
                      y_scale="log")
-
-        # plot_semantic_diversity(self.max_generations,
-        #                         self.semantic_diversity_values)
-        #
-        # plot_fitness_diversity(self.max_generations,
-        #                        self.fitness_diversity_values)
 
     def write_receipt(self):
         # Ensure the output directory exists
