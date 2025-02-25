@@ -1,7 +1,7 @@
-output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\dump
+output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\experiment_2\sis_adaptive
 seed: 42
 use_semantics: true
-adaptive_threshold: false
+adaptive_threshold: true
 elitism_size: 2
 independent_runs: 30
 max_generations: 1000
@@ -12,7 +12,7 @@ tournament_size: 7
 crossover_rate: 0.9
 mutation_rate: 0.25
 population_size: 200
-max_semantic_threshold: 0.01
+max_semantic_threshold: 0.05
 min_semantic_threshold: 0.01
 shuffle: true
 verbose: true

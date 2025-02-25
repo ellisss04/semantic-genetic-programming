@@ -1,0 +1,350 @@
+Configuration Details
+==============================
+independent_runs: 30
+max_generations: 1000
+initial_depth: 5
+final_depth: 7
+max_final_depth: 9
+crossover_rate: 0.9
+mutation_rate: 0.25
+elitism_size: 2
+output_dir: C:\Users\ellis\OneDrive\Documents\University\Year-3\SGP\SGP_project\results\dump
+population_size: 200
+project_name: SGP_project
+seed: 42
+use_semantics: True
+adaptive_threshold: False
+max_semantic_threshold: 0.01
+min_semantic_threshold: 0.01
+tournament_size: 7
+verbose: True
+
+RUN 1
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21927440082415733
+Best Individual Tree: (add (sin (sin 1)) (cos (subtract 1 (subtract x x))))
+Best Individual Fitness: -0.1809235803587378
+Ratio of Unique Individuals : Population: 0.4527363184079602
+Time to Complete: 3.716402053833008s
+
+
+RUN 2
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.1549297387582817
+Final Mean Fitness: -0.15102048705897192
+Best Individual Tree: (add (sin (cos 1)) (cos (cos x)))
+Best Individual Fitness: -0.03429656629080605
+Ratio of Unique Individuals : Population: 0.895
+Time to Complete: 4.592644929885864s
+
+
+RUN 3
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21421831328386404
+Best Individual Tree: (subtract (multiply (multiply x (sin x)) (sin (sin 1))) (sin (subtract (log 1) 1)))
+Best Individual Fitness: -0.10826267835208708
+Ratio of Unique Individuals : Population: 0.472636815920398
+Time to Complete: 2.74647855758667s
+
+
+RUN 4
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21438413832416284
+Best Individual Tree: (add (add (cos 1) (log (subtract 1 (log 1)))) (sin (cos 1)))
+Best Individual Fitness: -0.17116835903224878
+Ratio of Unique Individuals : Population: 0.3383084577114428
+Time to Complete: 3.010847568511963s
+
+
+RUN 5
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.15609021341782842
+Final Mean Fitness: -0.17565190288448793
+Best Individual Tree: (subtract (add 1 1) (cos x))
+Best Individual Fitness: -0.026247829155839304
+Ratio of Unique Individuals : Population: 0.275
+Time to Complete: 3.453343391418457s
+
+
+RUN 6
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.14010442010253887
+Final Mean Fitness: -0.1441954778169292
+Best Individual Tree: (subtract (cos (log (sin (cos x)))) (log (cos x)))
+Best Individual Fitness: -0.024194296536187068
+Ratio of Unique Individuals : Population: 0.855
+Time to Complete: 4.109486103057861s
+
+
+RUN 7
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.17623508963434933
+Final Mean Fitness: -0.17209594011975574
+Best Individual Tree: (subtract (cos (sin (log 1))) (sin (log (cos (multiply x (sin (cos (log 1))))))))
+Best Individual Fitness: -0.03130825123008011
+Ratio of Unique Individuals : Population: 0.8557213930348259
+Time to Complete: 4.330949068069458s
+
+
+RUN 8
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.20260857410297062
+Best Individual Tree: (subtract 1 (log (cos (sin x))))
+Best Individual Fitness: -0.009558302863359402
+Ratio of Unique Individuals : Population: 0.6019417475728155
+Time to Complete: 3.0036866664886475s
+
+
+RUN 9
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21451654148983562
+Best Individual Tree: (log (add 1 (add (add (subtract 1 x) 1) x)))
+Best Individual Fitness: -0.147394295639639
+Ratio of Unique Individuals : Population: 0.4577114427860697
+Time to Complete: 2.9070138931274414s
+
+
+RUN 10
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21445792616567602
+Best Individual Tree: (add (sin (sin (cos (multiply (add (sin x) (cos 1)) (log (sin 1)))))) (sin (multiply x x)))
+Best Individual Fitness: -0.1717766197697589
+Ratio of Unique Individuals : Population: 0.6218905472636815
+Time to Complete: 2.3877267837524414s
+
+
+RUN 11
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21057275647782508
+Best Individual Tree: (cos (log 1))
+Best Individual Fitness: -0.21006093250771862
+Ratio of Unique Individuals : Population: 0.39166666666666666
+Time to Complete: 2.5261764526367188s
+
+
+RUN 12
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.2104364966073851
+Best Individual Tree: (cos (log (log (add (log (log (log (cos 1)))) 1))))
+Best Individual Fitness: -0.21006093250771862
+Ratio of Unique Individuals : Population: 0.6008583690987125
+Time to Complete: 2.5061323642730713s
+
+
+RUN 13
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.1993580828076276
+Final Mean Fitness: -0.17254749563240077
+Best Individual Tree: (subtract 1 (log (cos (sin x))))
+Best Individual Fitness: -0.009558302863359402
+Ratio of Unique Individuals : Population: 0.585
+Time to Complete: 3.12199068069458s
+
+
+RUN 14
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21429194273269034
+Best Individual Tree: (add 1 (sin (multiply (log (sin 1)) (subtract (log 1) (cos 1)))))
+Best Individual Fitness: -0.14986934586659692
+Ratio of Unique Individuals : Population: 0.285
+Time to Complete: 2.286609411239624s
+
+
+RUN 15
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21440187487421775
+Best Individual Tree: (subtract 1 (log (cos x)))
+Best Individual Fitness: -0.0858176268869757
+Ratio of Unique Individuals : Population: 0.465
+Time to Complete: 2.5137243270874023s
+
+
+RUN 16
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.19567602707531198
+Best Individual Tree: (add (multiply (sin (sin (multiply x x))) (sin 1)) (cos (multiply (sin (cos (cos (subtract (subtract 1 x) (add x x))))) x)))
+Best Individual Fitness: -0.04000235460101365
+Ratio of Unique Individuals : Population: 0.43781094527363185
+Time to Complete: 3.236753225326538s
+
+
+RUN 17
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.15765673934496313
+Final Mean Fitness: -0.1472899750612571
+Best Individual Tree: (add (cos (cos x)) (sin (sin (cos 1))))
+Best Individual Fitness: -0.027107327509243523
+Ratio of Unique Individuals : Population: 0.915
+Time to Complete: 3.924433708190918s
+
+
+RUN 18
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21801117914655918
+Best Individual Tree: (add (sin (sin (multiply x x))) 1)
+Best Individual Fitness: -0.19595731666669353
+Ratio of Unique Individuals : Population: 0.4626865671641791
+Time to Complete: 2.263213872909546s
+
+
+RUN 19
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.2179899252256158
+Best Individual Tree: (add (subtract (cos (log (cos x))) (cos x)) (cos (multiply (log (multiply 1 x)) (multiply (add x (cos (log (log x)))) (log 1)))))
+Best Individual Fitness: -0.04604613791085668
+Ratio of Unique Individuals : Population: 0.7263681592039801
+Time to Complete: 2.5168402194976807s
+
+
+RUN 20
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21534615354454348
+Best Individual Tree: (cos (sin (log (log (sin 1)))))
+Best Individual Fitness: -0.21006093250771862
+Ratio of Unique Individuals : Population: 0.6566523605150214
+Time to Complete: 2.288433313369751s
+
+
+RUN 21
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21790679040045846
+Best Individual Tree: (add (multiply (cos x) (log 1)) (subtract (add 1 1) (cos x)))
+Best Individual Fitness: -0.026247829155839304
+Ratio of Unique Individuals : Population: 0.6417910447761194
+Time to Complete: 3.7228832244873047s
+
+
+RUN 22
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.2112872914262031
+Best Individual Tree: (add (add (sin (subtract (cos (sin (add 1 1))) (sin (multiply (subtract 1 1) 1)))) (cos 1)) (sin (multiply (log (multiply 1 1)) 1)))
+Best Individual Fitness: -0.1404569530973438
+Ratio of Unique Individuals : Population: 0.572139303482587
+Time to Complete: 2.3694512844085693s
+
+
+RUN 23
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.18600735853322706
+Best Individual Tree: (add (cos (multiply (log (sin (log (log (cos 1))))) (cos x))) (sin (subtract (multiply 1 1) (cos x))))
+Best Individual Fitness: -0.020563589036375996
+Ratio of Unique Individuals : Population: 0.5771144278606966
+Time to Complete: 3.095858097076416s
+
+
+RUN 24
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.2142410079038792
+Best Individual Tree: (add (cos 1) (cos (sin 1)))
+Best Individual Fitness: -0.1396823801043757
+Ratio of Unique Individuals : Population: 0.54
+Time to Complete: 2.3599116802215576s
+
+
+RUN 25
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.10643633226466524
+Final Mean Fitness: -0.11915532421187941
+Best Individual Tree: (subtract (cos (log (cos x))) (sin (log (cos x))))
+Best Individual Fitness: -0.004900308754065819
+Ratio of Unique Individuals : Population: 0.7960199004975125
+Time to Complete: 3.2435853481292725s
+
+
+RUN 26
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.21952867483534155
+Best Individual Tree: (cos (log (log (sin (subtract (multiply (sin (multiply x x)) (multiply (multiply x 1) (cos x))) (multiply (multiply (sin 1) (sin x)) (sin (log x))))))))
+Best Individual Fitness: -0.21006093250771862
+Ratio of Unique Individuals : Population: 0.5213675213675214
+Time to Complete: 2.5854921340942383s
+
+
+RUN 27
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.16954684762004735
+Final Mean Fitness: -0.17442618210065328
+Best Individual Tree: (add (sin (multiply (cos (add 1 (log (sin (cos x))))) (sin (sin (sin (cos (log 1))))))) (sin (cos (cos x))))
+Best Individual Fitness: -0.04609715537278987
+Ratio of Unique Individuals : Population: 0.835
+Time to Complete: 3.8887157440185547s
+
+
+RUN 28
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.15609021341782842
+Final Mean Fitness: -0.15128051023087413
+Best Individual Tree: (add (cos (add (cos x) (add (log (cos (cos (cos 1)))) (sin 1)))) (cos (cos (cos (log (log (log 1)))))))
+Best Individual Fitness: -0.01812013755470819
+Ratio of Unique Individuals : Population: 0.7263681592039801
+Time to Complete: 2.9800963401794434s
+
+
+RUN 29
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.21006093250771862
+Final Mean Fitness: -0.17685453496772952
+Best Individual Tree: (subtract (cos (log (subtract (cos (sin (add 1 1))) 1))) (sin (log (cos (sin x)))))
+Best Individual Fitness: -0.008589426543762454
+Ratio of Unique Individuals : Population: 0.6368159203980099
+Time to Complete: 3.5314931869506836s
+
+
+RUN 30
+==============================
+Experiment Metrics:
+Final Median Fitness: -0.1809235803587378
+Final Mean Fitness: -0.18801451570877284
+Best Individual Tree: (multiply (cos (log (cos (log (log 1))))) (add (cos (cos x)) (add (cos 1) (multiply 1 (log 1)))))
+Best Individual Fitness: -0.05420580016853931
+Ratio of Unique Individuals : Population: 0.61
+Time to Complete: 3.375589370727539s
+

@@ -12,7 +12,7 @@ from config import Config
 
 def target_function(x):
     # return x ** 3 + x ** 2 + x
-    return log(x+1) + sin(x)
+    return sin(x ** 2) + cos(x)
 
 
 def generate_dataset():

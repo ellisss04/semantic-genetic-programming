@@ -192,8 +192,7 @@ class GeneticProgram:
         Returns:
             Individual: The selected individual.
         """
-        population_copy = list(self.population)
-        tournament = random.sample(population_copy, self.tournament_size)
+        tournament = random.sample(self.population, self.tournament_size)
         return max(tournament, key=lambda ind: ind.fitness)
 
     def semantic_selection(self, parent_1: Individual) -> Individual:
@@ -348,35 +347,9 @@ class GeneticProgram:
                 self.population.remove(ind)
         return elites
 
-    def fitness_function_rmse(self, ind: Individual):
-        total_error = 0
-        total_node_count = 0
-
-        # Reset the semantic vector before evaluation
-
-        for x_value, y_value in self.dataset:
-            variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
-            y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
-            ind.set_semantics(y_pred)  # Store the prediction in the semantic vector
-            error = abs(y_pred - y_value) ** 2
-            total_error += error
-            total_node_count += node_count
-
-        mse = total_error / len(self.dataset)  # Calculate the mean squared error
-        rmse = sqrt(mse)
-
-        return -rmse, total_node_count
-
-    def set_fitness_if_none(self):
-        for individual in self.population:
-            if individual.fitness is None:  # Only evaluate if fitness has not been assigned
-                fitness, node_count = self.fitness_function_rmse(individual)
-                individual.set_fitness(fitness)
-
     def genetic_operations(self):
         total_node_count = 0
         new_individuals = []
-
         for _ in range(2):
             parent1, parent2 = self.select_parents()
 
@@ -396,10 +369,51 @@ class GeneticProgram:
 
         return new_individuals, total_node_count
 
+    def fitness_function_rmse(self, ind: Individual):
+        total_error = 0
+        total_node_count = 0
+
+        # Reset the semantic vector before evaluation
+
+        for x_value, y_value in self.dataset:
+            variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
+            y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
+            ind.set_semantics(y_pred)  # Store the prediction in the semantic vector
+            error = abs(y_pred - y_value) ** 2
+            total_error += error
+            total_node_count += node_count
+
+        mse = total_error / len(self.dataset)  # Calculate the mean squared error
+        rmse = sqrt(mse)
+
+        return -rmse, total_node_count
+
+    def fitness_function_sae(self, ind: Individual):
+        total_error = 0
+        total_node_count = 0
+
+        # Reset the semantic vector before evaluation
+
+        for x_value, y_value in self.dataset:
+            variables = {'x': x_value}  # Map 'x' to the current x_value in the dataset
+            y_pred, node_count = ind.evaluate(variables)  # Evaluate the individual's tree (f(x))
+            ind.set_semantics(y_pred)  # Store the prediction in the semantic vector
+            error = abs(y_pred - y_value)
+            total_error += error
+            total_node_count += node_count
+
+        return -total_error, total_node_count
+
+    def set_fitness_if_none(self):
+        for individual in self.population:
+            if individual.fitness is None:  # Only evaluate if fitness has not been assigned
+                fitness, node_count = self.fitness_function_rmse(individual)
+                individual.set_fitness(fitness)
+
     def steady_state_population(self):
 
         # self.current_threshold = self.sigmoid_decay()
-        # self.current_threshold = self.linear_decay()
+        self.current_threshold = self.linear_decay()
 
         elites = self.elitism()
 
@@ -425,9 +439,10 @@ class GeneticProgram:
         tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
         self.start_time = time.time()
         best_fitness = None
+        self.set_fitness_if_none()
         for generation in tqdm_loop:
+
             self.generation = generation
-            self.set_fitness_if_none()
 
             metrics = self.get_fitness_metrics()
 
@@ -448,6 +463,7 @@ class GeneticProgram:
         self.end_time = time.time()
 
         # self.post_processing()
+        # plot_semantic_diversity(self.max_generations, self.semantic_diversity_values)
         # self.diversity_plots()
         self.write_receipt()
 
