@@ -76,6 +76,8 @@ class GeneticProgram:
         self.start_time = None
         self.end_time = None
         self.generation = None
+        self.is_solved = False
+        self.solved_generation = None
         self.function_arity_map = {}
         self.population = self.ramped_half_and_half()
         self.current_threshold = None
@@ -412,8 +414,8 @@ class GeneticProgram:
 
     def steady_state_population(self):
 
-        # self.current_threshold = self.sigmoid_decay()
-        self.current_threshold = self.linear_decay()
+        self.current_threshold = self.sigmoid_decay()
+        # self.current_threshold = self.linear_decay()
 
         elites = self.elitism()
 
@@ -438,7 +440,6 @@ class GeneticProgram:
         """
         tqdm_loop = tqdm(range(self.max_generations), desc="Evolving", unit="Gen")
         self.start_time = time.time()
-        best_fitness = None
         self.set_fitness_if_none()
         for generation in tqdm_loop:
 
@@ -458,6 +459,11 @@ class GeneticProgram:
             tqdm_loop.set_description(f"Evolving Run {self.run_number + 1} - Best Fitness = {best_fitness} - "
                                       f"Mean Fitness {mean_fitness}.")
 
+            if abs(best_fitness) < self.hit_threshold:
+                if not self.is_solved:
+                    self.is_solved = True
+                    self.solved_generation = self.generation
+
             self.steady_state_population()
 
         self.end_time = time.time()
@@ -467,9 +473,9 @@ class GeneticProgram:
         # self.diversity_plots()
         self.write_receipt()
 
-        if abs(best_fitness) < self.hit_threshold:
-            return 1
-        return 0
+        if self.is_solved:
+            return 1, self.solved_generation
+        return 0, None
 
     def get_fitness_metrics(self):
         # Filter out individuals with None fitness values

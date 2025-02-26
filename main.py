@@ -11,8 +11,8 @@ from config import Config
 
 
 def target_function(x):
-    # return x ** 3 + x ** 2 + x
-    return sin(x ** 2) + cos(x)
+    return  x ** 5 + x ** 4 + x ** 3 + x ** 2 + x
+    # return 2 * (sin(x) * cos(x))
 
 
 def generate_dataset():
@@ -35,7 +35,7 @@ def multiply(x, y): return x * y
 
 
 def divide(x, y):
-    if abs(y) < 0.1:  # Avoid very small denominators
+    if abs(y) < 1:  # Avoid very small denominators
         return x  # Treat as no-op
     return x / y
 
@@ -114,13 +114,15 @@ if __name__ == "__main__":
 
     random.seed(seed)
 
-    functions = [add, subtract, multiply, sin, cos, log]
+    functions = [add, subtract, multiply, divide, sin, cos, log]
     terminals = ['x', 1]
 
     write_config_details(output_dir, config, verbose)
 
     print("=" * 30)
-    hits = 0
+    total_hits = 0
+    solved_generations = 0
+    solved_count = 0
     for run in range(number_of_runs):
         gp = GeneticProgram(
             config=config_path,
@@ -144,6 +146,11 @@ if __name__ == "__main__":
             tournament_size=tournament_size,
         )
 
-        hits += gp.evolve()
+        hits, solved_generation = gp.evolve()
+        total_hits += hits
+        if solved_generation:
+            solved_generations += solved_generation
+            solved_count += 1
 
-    print(f'number of hits {hits}')
+    print(f'number of hits {total_hits}')
+    print(f'average generation of hit {solved_generations / solved_count}')
