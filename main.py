@@ -11,7 +11,7 @@ from config import Config
 
 
 def target_function(x):
-    return  x ** 5 + x ** 4 + x ** 3 + x ** 2 + x
+    return sin(x) + sin(x + x ** 2)
     # return 2 * (sin(x) * cos(x))
 
 
@@ -153,4 +153,5 @@ if __name__ == "__main__":
             solved_count += 1
 
     print(f'number of hits {total_hits}')
-    print(f'average generation of hit {solved_generations / solved_count}')
+    if solved_count != 0:
+        print(f'average generation of hit {solved_generations / solved_count}')
